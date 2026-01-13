@@ -1,5 +1,6 @@
 'use client'
 
+import { ArrowBigLeftDash, ArrowBigRight, Bell } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 const EMOJIS = ["😀", "😂", "🥲", "😍", "😎", "🤔", "🔥", "💀", "🚀", "❤️"];
@@ -35,11 +36,11 @@ export default function ChatUI() {
 
     return (
         <div className="h-screen w-full bg-[#0b0f1a] text-white flex overflow-hidden relative">
-            
+
             {/* Mobile Sidebar Overlay */}
             {isSidebarOpen && (
-                <div 
-                    className="fixed inset-0 bg-black/50 z-40 lg:hidden" 
+                <div
+                    className="fixed inset-0 bg-black/50 z-40 lg:hidden"
                     onClick={() => setIsSidebarOpen(false)}
                 />
             )}
@@ -77,7 +78,7 @@ export default function ChatUI() {
                 <header className="h-16 border-b border-white/5 flex items-center justify-between px-4 lg:px-6 bg-[#0e1326]">
                     <div className="flex items-center gap-3">
                         {/* Mobile Toggle Button */}
-                        <button 
+                        <button
                             onClick={() => setIsSidebarOpen(true)}
                             className="lg:hidden p-2 -ml-2 text-white/60 hover:text-white"
                         >
@@ -90,7 +91,7 @@ export default function ChatUI() {
                     </div>
 
                     <div className="flex items-center gap-2 lg:gap-4 text-white/60">
-                        <button className="p-2">🔔</button>
+                        <button className="p-2"><Bell/></button>
                         <div className="hidden sm:flex h-9 w-9 rounded-full bg-indigo-500 items-center justify-center font-bold">
                             A
                         </div>
@@ -98,11 +99,11 @@ export default function ChatUI() {
                 </header>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-4 space-y-4">
+                <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-4 space-y-3">
                     {messages.map((m) => (
                         <div
                             key={m.id}
-                            className={`flex ${m.sender === "me" ? "justify-end" : "justify-start"}`}
+                            className={`flex ${m.sender === "me" ? "justify-end sm:justify-start" : "justify-start"}`}
                         >
                             <div className={`
                                 max-w-[85%] lg:max-w-[60%]
@@ -110,7 +111,7 @@ export default function ChatUI() {
                                 break-words 
                                 py-2 px-4 
                                 rounded-2xl 
-                                ${m.sender === "me" ? "bg-indigo-600 rounded-tr-none" : "bg-white/10 rounded-tl-none"}
+                                ${m.sender === "me" ? "bg-indigo-600" : "bg-white/10"}
                             `}>
                                 {m.text}
                             </div>
@@ -121,52 +122,61 @@ export default function ChatUI() {
 
                 {/* Input bar */}
                 <div className="border-t border-white/5 p-3 lg:p-4 bg-[#0e1326]">
-                    <div className="flex items-center gap-2 lg:gap-3 relative">
-                        <button className="hidden sm:block px-3 py-2 text-sm rounded-lg bg-white/10 hover:bg-white/20">
-                            Exit
-                        </button>
-                        
-                        <div className="flex-1 relative">
-                            <input
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                                placeholder="Message..."
-                                className="w-full bg-[#0b0f1a] border border-white/10 rounded-xl px-4 py-2.5 lg:py-3 pr-10 outline-none focus:border-indigo-500 text-sm lg:text-base"
-                            />
-
-                            <button
-                                onClick={() => setShowEmoji((v) => !v)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white"
-                            >
-                                🙂
+                    <div className="sm:flex sm:flex-row items-center gap-2 lg:gap-3 relative">
+                        <div className="mb-4 sm:mb-0 flex gap-2">
+                            <button className="block px-3 py-2 text-sm rounded-lg bg-white/10 hover:bg-white/20">
+                                Exit
                             </button>
-
-                            {showEmoji && (
-                                <div className="absolute bottom-14 right-0 bg-[#111735] border border-white/10 rounded-xl p-2 grid grid-cols-5 gap-1 shadow-xl z-50">
-                                    {EMOJIS.map((e) => (
-                                        <button
-                                            key={e}
-                                            onClick={() => {
-                                                setInput((prev) => prev + e);
-                                                setShowEmoji(false);
-                                            }}
-                                            className="p-2 text-lg hover:scale-125 transition"
-                                        >
-                                            {e}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
+                            <button className="block px-3 py-2 text-sm rounded-lg hover:bg-indigo-500 bg-indigo-600">
+                                Next
+                            </button>
                         </div>
 
-                        <button
-                            onClick={sendMessage}
-                            className="p-2.5 lg:px-4 lg:py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 transition-colors"
-                        >
-                            <span className="hidden lg:inline">Send</span>
-                            <span className="lg:hidden">➡️</span>
-                        </button>
+                        <div className="flex gap-2 flex-1">
+                            <div className="flex-1 relative">
+                                <input
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                                    placeholder="Message..."
+                                    className="w-full bg-[#0b0f1a] border border-white/10 rounded-xl px-4 py-2.5 lg:py-3 pr-10 outline-none focus:border-indigo-500 text-sm lg:text-base"
+                                />
+
+                                <button
+                                    onClick={() => setShowEmoji((v) => !v)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white"
+                                >
+                                    🙂
+                                </button>
+
+                                {showEmoji && (
+                                    <div className="absolute bottom-14 right-0 bg-[#111735] border border-white/10 rounded-xl p-2 grid grid-cols-5 gap-1 shadow-xl z-50">
+                                        {EMOJIS.map((e) => (
+                                            <button
+                                                key={e}
+                                                onClick={() => {
+                                                    setInput((prev) => prev + e);
+                                                    setShowEmoji(false);
+                                                }}
+                                                className="p-2 text-lg hover:scale-125 transition"
+                                            >
+                                                {e}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <button
+                                onClick={sendMessage}
+                                className="p-2.5 lg:px-4 lg:py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 transition-colors"
+                            >
+                                <span className="hidden lg:inline">Send</span>
+                                {/* <span className="lg:hidden"><ArrowBigLeftDash></ArrowBigLeftDash></span> */}
+                                <span className="lg:hidden"><ArrowBigRight /></span>
+                            </button>
+
+                        </div>
                     </div>
                 </div>
             </main>
