@@ -22,6 +22,7 @@ interface ChatControlsProps {
   onChatStart: () => void;
   onExit: () => void;
   onSendImage: (imageUrl: string) => Promise<void>
+  onSendGift: (amount: number, currency:"INR", giftId?:string) => void
 }
 
 export default function ChatControls({
@@ -33,7 +34,8 @@ export default function ChatControls({
   onNext,
   onChatStart,
   onExit,
-  onSendImage
+  onSendImage,
+  onSendGift
 }: ChatControlsProps) {
   const { state } = usePlan();
 
@@ -131,6 +133,7 @@ export default function ChatControls({
 
   const handleSendGift = (amount: number) => {
     console.log("Gifting amount:", amount);
+    onSendGift(amount, "INR")
     // Your socket logic here: socket.emit("gift:send", { amount });
   };
 

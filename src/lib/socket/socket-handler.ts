@@ -1,24 +1,24 @@
 import { Server as SocketIOServer, Socket } from "socket.io";
-import { 
-  freeMods, 
-  activeChats, 
-  searchTimeouts, 
-  endChat, 
-  clearSearch 
+import {
+  freeMods,
+  activeChats,
+  searchTimeouts,
+  endChat,
+  clearSearch
 } from "./socket-utils";
 
 type ChatPayload =
   | {
-      type: "text";
-      content: string;
-    }
+    type: "text";
+    content: string;
+  }
   | {
-      type: "image";
-      content: string; // hosted image URL
-    }
+    type: "image";
+    content: string; // hosted image URL
+  }
 
 
-type GiftPayload =  {
+type GiftPayload = {
   type: "gift";
   amount: number;
   currency: "USD" | "EUR" | "INR";
@@ -35,38 +35,54 @@ export const handleUserNext = (io: SocketIOServer, socket: Socket) => {
 
   // Matchmaking delay: 3-12 minutes based on your code (3*60*10 to 12*60*10)
   // Note: Your original math was (min 3000ms to 7200ms). Adjust if needed.
-  const min = 3 * 60 * 10; 
+  const min = 3 * 60 * 10;
   const max = 12 * 60 * 10;
   const delay = Math.floor(Math.random() * (max - min + 1)) + min;
 
   socket.emit("match:searching", delay);
 
   const timeout = setTimeout(() => {
-    searchTimeouts.delete(socket.id);
-
     const modSocketId = [...freeMods].find((id) => id !== socket.id);
-
     if (!modSocketId) {
       socket.emit("no-mod-available");
       return;
     }
-
+    
+    const modSocket = io.sockets.sockets.get(modSocketId);
+    if (!modSocket) return;
+    
+    // 🔑 CREATE ROOM
+    const roomId = `chat_${socket.id}_${modSocketId}`;
+    
+    // 🔑 JOIN ROOM (THIS WAS MISSING)
+    socket.join(roomId);
+    modSocket.join(roomId);
+    
+    // 🔑 STORE ROOM ID
+    socket.data.roomId = roomId;
+    modSocket.data.roomId = roomId;
+    
+    // 🔑 TRACK ACTIVE CHAT
     freeMods.delete(modSocketId);
     activeChats.set(socket.id, modSocketId);
     activeChats.set(modSocketId, socket.id);
-
-    io.to(socket.id).emit("chat:connected");
-    io.to(modSocketId).emit("chat:connected");
-
-    console.log(`🔗 Connected: ${socket.id} ↔ ${modSocketId}`);
+    
+    // 🔔 NOTIFY BOTH SIDES
+    io.to(roomId).emit("chat:connected");
+    
+    console.log("ROOM CREATED:", roomId);
+    
   }, delay);
 
   searchTimeouts.set(socket.id, timeout);
 };
 
-export const handleMessage = (io: SocketIOServer, socket: Socket, payload: ChatPayload) => {
+export const handleMessage = (
+  io: SocketIOServer,
+  socket: Socket,
+  payload: ChatPayload
+) => {
   const { type, content } = payload;
-
   if (!content) return;
 
   const roomId = socket.data.roomId;
@@ -75,10 +91,11 @@ export const handleMessage = (io: SocketIOServer, socket: Socket, payload: ChatP
   io.to(roomId).emit("chat:message", {
     id: Date.now(),
     sender: socket.data.role,
-    type, // "text" | "image"
+    type,
     text: content,
   });
 };
+
 
 export const handleGiftMessage = (io: SocketIOServer, socket: Socket, payload: GiftPayload) => {
   const { amount, currency, giftId } = payload;
