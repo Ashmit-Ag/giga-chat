@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ArrowBigRight } from "lucide-react";
-import { getSocket } from "@/lib/socket-mod";
+import { getSocket } from "@/lib/socket/socket-mod";
 import { signOut } from "next-auth/react";
 import { redirect } from "next/navigation";
+import ModChatHeader from "../components/ModChatHeader";
 
 type Message = {
   id: number;
@@ -26,7 +27,7 @@ export default function ModChatPage() {
   const modName = "Moderator_" + Math.floor(Math.random() * 100); // replace with real mod name
 
   useEffect(() => {
-    fetch("/api/socket");
+    // fetch("/api/socket");
 
     const socket = socketRef.current;
 
@@ -35,7 +36,7 @@ export default function ModChatPage() {
     socket.on("chat:connected", () => {
       setMessages([]);
       setConnected(true);
-      setPartnerName("USer");
+      setPartnerName("USER");
     });
 
     socket.on("chat:message", (msg: string) => {
@@ -105,22 +106,11 @@ export default function ModChatPage() {
     setPartnerName(null);
   };
 
-  const handleLogout = async () =>{
-    const logout = await signOut()
-
-    redirect("/login")
-  }
 
   return (
     <div className="h-dvh bg-[#0b0f1a] text-white flex flex-col">
       {/* Header */}
-      <header className="h-16 border-b border-white/5 flex items-center px-4 bg-[#0e1326]">
-        <h1 className="font-semibold">
-          {connected
-            ? `Chatting with ${partnerName}`
-            : "Waiting for user..."}
-        </h1>
-      </header>
+        <ModChatHeader onNext={exitChat} connected={connected}/>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -169,7 +159,6 @@ export default function ModChatPage() {
           >
             <ArrowBigRight />
           </button>
-          <button onClick={exitChat}>Log out</button>
         </div>
       </div>
     </div>

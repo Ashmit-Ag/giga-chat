@@ -123,3 +123,42 @@
     @apply bg-background text-foreground;
   }
 }
+
+
+.amber-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #f59e0b transparent;
+}
+
+.amber-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.amber-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.amber-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #f59e0b, #fbbf24);
+  border-radius: 999px;
+}
+
+.amber-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #fbbf24, #fde68a);
+}
+
+/* Force Mantine carousel indicators to always be visible */
+.mantine-Carousel-indicator {
+  background-color: rgba(255, 255, 255, 0.35) !important;
+  opacity: 1 !important;
+  margin-inline: 3px;
+}
+
+/* Active indicator */
+.mantine-Carousel-indicator[data-active] {
+  background-color: #ffffff !important;;
+}
+
+body{
+  background-color: #141c33 !important;
+}

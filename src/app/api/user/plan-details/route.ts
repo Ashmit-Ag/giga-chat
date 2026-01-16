@@ -11,6 +11,10 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  if (session?.user?.role !== "USER"){
+    return NextResponse.json({message:"User only"}, {status:200});
+  }
+
   try {
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
@@ -51,7 +55,7 @@ export async function GET() {
         can_send_videos: plan.sendVideos,
         can_send_emojis: plan.sendEmojis,
         chat_cooldown: plan.chatTimer,
-        chats_left: Math.max(0, plan.maxDailyChats - user.chatCount),
+        chats_left: Math.max(0, plan.maxDailyChats - (plan.maxDailyChats - user.chatCount)),
         chat_timer: plan.chatTimer,
         max_friend_req: plan.maxFriendReq,
         min_match_time: plan.minMatchTime,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { getSocket } from "@/lib/socket-client";
+import { getSocket } from "@/lib/socket/socket-client";
 import { signOut } from "next-auth/react";
 import { redirect } from "next/navigation";
 
@@ -10,6 +10,7 @@ import MessageList from "@/components/chat/MessageList";
 import ChatControls from "@/components/chat/ChatControls";
 import { usePlan } from "@/contexts/PlanContext";
 import { Socket } from "socket.io-client";
+import Sidebar from "@/components/chat/ChatSidebar";
 
 type Message = { id: number; sender: "me" | "them"; text: string };
 
@@ -24,7 +25,8 @@ export default function UserChatPage() {
   const [isTyping, setIsTyping] = useState(false);
   const [searchingText, setSearchingText] = useState<string | null>(null);
   const [seconds, setSeconds] = useState(1);
-  const { state, decreaseChat } = usePlan()
+  const [chatStatus, setChatStatus] = useState<"idle" | "active" | "partner_skipped" | "me_skipped">('idle')
+  const { state, decreaseChat, clearPlan } = usePlan()
 
   const username = "User_" + Math.floor(Math.random() * 1000);
   const noChatsLeft =
@@ -34,7 +36,7 @@ export default function UserChatPage() {
 
 
   useEffect(() => {
-    fetch("/api/socket");
+    // fetch("/api/socket");
     const socket = socketRef.current;
     socket.emit("user:identify", { username });
 
@@ -82,19 +84,60 @@ export default function UserChatPage() {
     setInput("");
   };
 
+  const sendImageMessage = async (imageUrl: string) => {
+    if (!imageUrl || !connected) return;
+    if (noChatsLeft) return;
+  
+    socketRef.current.emit("chat:message", {
+      type: "image",
+      content: imageUrl,
+    });
+  
+    socketRef.current.emit("stop:typing");
+  
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        sender: "me",
+        type: "image",
+        text: imageUrl,
+      },
+    ]);
+  
+    await decreaseChat();
+  };
+  
+
   const nextChat = () => {
     // 1. Clear UI state immediately so the user knows the transition started
+    setChatStatus("me_skipped")
     setMessages([]);
     setConnected(false);
     setPartnerName(null);
     setSearchingText('Searching...')
   
     // 2. Get the delay from plan context (e.g., 90s for Free, 15s for Basic, 0s for Premium)
-    // Convert seconds to milliseconds
     const delay = (state?.min_match_time? state.min_match_time:0) * 1000;
   
-    // 3. Optional: Set a searching state so the UI can show a countdown/spinner
-    // setSearchingText(`Searching... (Wait ${state?.min_match_time}s)`);
+    setTimeout(() => {
+      if (socketRef.current) {
+        socketRef.current.emit("chat:next");
+        socketRef.current.emit("user:next");
+      }
+    }, delay);
+  };
+
+  const chatStart = () => {
+    // 1. Clear UI state immediately so the user knows the transition started
+    // setChatStatus("me_skipped")
+    setMessages([]);
+    setConnected(false);
+    setPartnerName(null);
+    setSearchingText('Searching...')
+  
+    // 2. Get the delay from plan context (e.g., 90s for Free, 15s for Basic, 0s for Premium)
+    const delay = (state?.min_match_time? state.min_match_time:0) * 1000;
   
     setTimeout(() => {
       if (socketRef.current) {
@@ -105,28 +148,46 @@ export default function UserChatPage() {
   };
  
   return (
-    <div className="h-dvh bg-[#0b0f1a] text-white flex flex-col">
-      <ChatHeader connected={connected} partnerName={partnerName} searchingText={searchingText} />
-      
-      <MessageList 
-        messages={messages} 
-        isTyping={isTyping} 
-        partnerName={partnerName} 
-        searchingText={searchingText} 
-        seconds={seconds} 
-        connected={connected} 
-      />
+    <div className="h-dvh max-w-125 mx-auto border-x border-white/20 bg-[#0b0f1a] text-white flex ">
+  {/* Sidebar */}
+  {/* <Sidebar sessions={[]} /> */}
 
-      <ChatControls 
-        input={input}
-        connected={connected}
-        searchingText={searchingText}
-        onInputChange={handleInputChange}
-        onSendMessage={sendMessage}
-        onNext={nextChat}
-        onExit={() => { socketRef.current.emit("chat:next"); setConnected(false); setMessages([]); }}
-        onLogout={async () => { await signOut(); redirect("/login"); }}
-      />
-    </div>
+  {/* Chat Area */}
+  <div className="flex flex-col flex-1 min-w-0">
+    <ChatHeader
+      connected={connected}
+      partnerName={partnerName || undefined}
+      searchingText={searchingText || undefined}
+    />
+
+    <MessageList
+      messages={messages}
+      isTyping={isTyping}
+      partnerName={partnerName}
+      searchingText={searchingText}
+      seconds={seconds}
+      connected={connected}
+      chatStatus={chatStatus}
+    />
+
+    <ChatControls
+      input={input}
+      connected={connected}
+      searchingText={searchingText}
+      onInputChange={handleInputChange}
+      onSendMessage={sendMessage}
+      onNext={nextChat}
+      onChatStart={chatStart}
+      onSendImage={sendImageMessage}
+      onExit={() => {
+        socketRef.current.emit("chat:next");
+        setChatStatus("me_skipped")
+        setConnected(false);
+        setMessages([]);
+      }}
+    />
+  </div>
+</div>
+
   );
 }

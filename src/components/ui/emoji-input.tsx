@@ -3,24 +3,36 @@
 import { Smile } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
+// Import the Theme enum
+import { Theme } from 'emoji-picker-react';
 
-// We use dynamic import to prevent SSR errors
 const Picker = dynamic(() => import('emoji-picker-react'), { ssr: false });
 
-// Inside components/ui/emoji-input.tsx
 export default function EmojiInput({ value, onChange, disabled }: any) {
-    const [show, setShow] = useState(false);
-    return (
-      <div className="relative">
-        <button disabled={disabled} onClick={() => setShow(!show)} type="button"><Smile/></button>
-        {show && (
-          <div className="absolute bottom-full right-0 z-50">
-            <Picker onEmojiClick={(emoji) => {
+  const [show, setShow] = useState(false);
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setShow(!show)}
+        className="p-2 rounded-md disabled:opacity-50"
+      >
+        <Smile className="w-5 h-5 text-zinc-300" />
+      </button>
+
+      {show && (
+        <div className="absolute bottom-full right-0 z-50 mt-2">
+          <Picker
+            theme={Theme.DARK} // Use the enum here
+            onEmojiClick={(emoji) => {
               onChange(value + emoji.emoji);
-              // setShow(false); 
-            }} />
-          </div>
-        )}
-      </div>
-    );
-  }
+              setShow(false);
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}

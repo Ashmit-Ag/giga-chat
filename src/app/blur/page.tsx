@@ -1,5 +1,7 @@
 "use client";
 
+import { notifications } from "@mantine/notifications";
+import { IconX } from "@tabler/icons-react";
 import { useState } from "react";
 
 export default function BlurImagePage() {
@@ -23,7 +25,12 @@ export default function BlurImagePage() {
 
     if (!res.ok) {
       setLoading(false);
-      alert("Failed to blur image");
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to blur the image',
+        color: 'red',
+        icon: <IconX size={16} />
+      });
       return;
     }
 

@@ -1,0 +1,100 @@
+import { Server as SocketIOServer, Socket } from "socket.io";
+import { 
+  freeMods, 
+  activeChats, 
+  searchTimeouts, 
+  endChat, 
+  clearSearch 
+} from "./socket-utils";
+
+type ChatPayload =
+  | {
+      type: "text";
+      content: string;
+    }
+  | {
+      type: "image";
+      content: string; // hosted image URL
+    }
+
+
+type GiftPayload =  {
+  type: "gift";
+  amount: number;
+  currency: "USD" | "EUR" | "INR";
+  giftId?: string;
+};
+
+
+export const handleUserNext = (io: SocketIOServer, socket: Socket) => {
+  if (socket.data.role !== "user") return;
+
+  clearSearch(socket.id);
+  endChat(io, socket);
+  freeMods.delete(socket.id);
+
+  // Matchmaking delay: 3-12 minutes based on your code (3*60*10 to 12*60*10)
+  // Note: Your original math was (min 3000ms to 7200ms). Adjust if needed.
+  const min = 3 * 60 * 10; 
+  const max = 12 * 60 * 10;
+  const delay = Math.floor(Math.random() * (max - min + 1)) + min;
+
+  socket.emit("match:searching", delay);
+
+  const timeout = setTimeout(() => {
+    searchTimeouts.delete(socket.id);
+
+    const modSocketId = [...freeMods].find((id) => id !== socket.id);
+
+    if (!modSocketId) {
+      socket.emit("no-mod-available");
+      return;
+    }
+
+    freeMods.delete(modSocketId);
+    activeChats.set(socket.id, modSocketId);
+    activeChats.set(modSocketId, socket.id);
+
+    io.to(socket.id).emit("chat:connected");
+    io.to(modSocketId).emit("chat:connected");
+
+    console.log(`🔗 Connected: ${socket.id} ↔ ${modSocketId}`);
+  }, delay);
+
+  searchTimeouts.set(socket.id, timeout);
+};
+
+export const handleMessage = (io: SocketIOServer, socket: Socket, payload: ChatPayload) => {
+  const { type, content } = payload;
+
+  if (!content) return;
+
+  const roomId = socket.data.roomId;
+  if (!roomId) return;
+
+  io.to(roomId).emit("chat:message", {
+    id: Date.now(),
+    sender: socket.data.role,
+    type, // "text" | "image"
+    text: content,
+  });
+};
+
+export const handleGiftMessage = (io: SocketIOServer, socket: Socket, payload: GiftPayload) => {
+  const { amount, currency, giftId } = payload;
+
+  if (!amount || amount <= 0) return;
+
+  const roomId = socket.data.roomId;
+  if (!roomId) return;
+
+  io.to(roomId).emit("chat:gift", {
+    id: Date.now(),
+    sender: socket.data.role,
+    type: "gift",
+    amount,
+    currency,
+    giftId,
+  });
+};
+

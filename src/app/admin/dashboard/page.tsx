@@ -95,17 +95,17 @@ function DashboardOverview({ onEditPlans }: { onEditPlans: () => void }) {
         <StatCard title="Monthly MRR" value="₹78,000" subtitle="Recurring plans" icon={<IndianRupee className="text-indigo-400" />} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 ">
         <Card className="bg-[#0f1424] border-white/10">
           <CardContent className="p-6">
-            <h3 className="text-lg font-semibold mb-2">Live Activity</h3>
+            <h3 className="text-lg font-semibold mb-2 text-white">Live Activity</h3>
             <p className="text-white/40 text-sm">Monitoring 142 active socket connections...</p>
           </CardContent>
         </Card>
 
         <Card className="bg-[#0f1424] border-white/10 flex flex-col justify-between">
           <CardContent className="p-6">
-            <h3 className="text-lg font-semibold mb-2">Quick Actions</h3>
+            <h3 className="text-lg font-semibold mb-2 text-white">Quick Actions</h3>
             <p className="text-white/40 text-sm mb-4">Update global pricing and feature gates.</p>
             <Button onClick={onEditPlans} className="bg-indigo-600 hover:bg-indigo-500 w-full">Manage Subscription Plans</Button>
           </CardContent>

@@ -5,11 +5,11 @@ import { prisma } from '@/lib/prisma';
 
 // FETCH ALL PLANS
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  // const session = await getServerSession(authOptions);
 
-  if (session?.user?.role !== "ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-  }
+  // if (session?.user?.role !== "ADMIN") {
+  //   return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  // }
 
   try {
     const plans = await prisma.plan.findMany({
