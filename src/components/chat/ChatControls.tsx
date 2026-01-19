@@ -21,8 +21,9 @@ interface ChatControlsProps {
   onNext: () => void;
   onChatStart: () => void;
   onExit: () => void;
+  onExit2: () => void;
   onSendImage: (imageUrl: string) => Promise<void>
-  onSendGift: (amount: number, currency:"INR", giftId?:string) => void
+  onSendGift: (amount: number, currency: "INR", giftId?: string) => void
 }
 
 export default function ChatControls({
@@ -34,6 +35,7 @@ export default function ChatControls({
   onNext,
   onChatStart,
   onExit,
+  onExit2,
   onSendImage,
   onSendGift
 }: ChatControlsProps) {
@@ -87,18 +89,18 @@ export default function ChatControls({
     });
 
     const data = await response.json();
-    if (!data.success){ 
+    if (!data.success) {
       console.log("MESSAGE IMAGE BB", data)
       throw new Error("Upload failed");
     }
-    
+
     return data.imageUrl; // The hosted link returned by your DB/Storage
   };
- 
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-  
+
     if (!file.type.startsWith("image/")) {
       notifications.show({
         title: 'Invalid File',
@@ -108,15 +110,15 @@ export default function ChatControls({
       });
       return;
     }
-  
+
     try {
       setIsUploading(true);
-  
+
       const hostedUrl = await uploadImageToDB(file);
       // const hostedUrl = URL.createObjectURL(file);
-  
+
       await onSendImage(hostedUrl);
-  
+
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -132,7 +134,7 @@ export default function ChatControls({
       setIsUploading(false);
     }
   };
-  
+
 
   const handleSendGift = (amount: number) => {
     console.log("Gifting amount:", amount);
@@ -207,15 +209,15 @@ export default function ChatControls({
             disabled={searchingText !== null}
             className="bg-indigo-600 absolute -top-17 w-full text-md font-semibold hover:bg-indigo-500 px-4 py-6"
           >
-            Find New Friends
+            {!searchingText ? "Find New Friends" : "Searching..."}
           </Button>
         )}
         <div className="relative flex-1">
-          <input
+          <textarea
             value={input}
             onChange={(e) => onInputChange(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
+              if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 if (cooldown === 0 || state?.chat_timer === 0) {
                   handleSend();
@@ -223,34 +225,44 @@ export default function ChatControls({
               }
             }}
             disabled={!connected}
-            placeholder={
-              connected ? "Type a message..." : "Click Start "
-            }
-            className="w-full bg-[#0b0f1a] border border-white/10 rounded-xl px-4 py-3 outline-none disabled:opacity-40"
+            placeholder={connected ? "Type a message..." : "Click Start"}
+            rows={1}
+            className="
+              w-full resize-none
+              bg-[#0b0f1a]
+              border border-white/10 rounded-xl
+              pl-4 py-3
+              pr-16
+              outline-none
+              disabled:opacity-40
+              overflow-y-auto overflow-x-hidden
+              leading-relaxed
+              max-h-32
+            "
           />
 
           {/* Feature buttons */}
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center">
 
-            {state?.can_send_emojis && (
+            {/* {state?.can_send_emojis && (
               <EmojiInput
                 value={input}
                 onChange={onInputChange}
                 disabled={!connected}
               />
-            )}
-            {state?.can_send_gifs && (
-              <div className="relative">
+            )} */}
+            {/* {state?.can_send_gifs && ( */}
+              <div className="relative pb-2">
                 <button
                   type="button"
-                  disabled={isUploading || !connected}
+                  disabled={isUploading || !connected || !state?.can_send_gifs}
                   onClick={() => fileInputRef.current?.click()}
-                  className="p-3 rounded-xl transition-all disabled:opacity-50"
+                  className="p-2 rounded-lg transition disabled:opacity-50"
                 >
                   {isUploading ? (
-                    <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
+                    <Loader2 className="w-5 h-5 text-indigo-400 animate-spin" />
                   ) : (
-                    <ImageIcon className="w-6 h-6 text-white/70" />
+                    <ImageIcon className="w-5 h-5 text-white/70" />
                   )}
                 </button>
 
@@ -263,7 +275,12 @@ export default function ChatControls({
                   className="hidden"
                 />
               </div>
-            )}
+            {/* {state?.can_send_emojis && ( */}
+              <EmojiInput
+                value={input}
+                onChange={onInputChange}
+                disabled={!connected || !state?.can_send_gifs}
+              />
           </div>
         </div>
         <div>
@@ -282,7 +299,7 @@ export default function ChatControls({
           {state?.chat_timer !== 0 && cooldown > 0 ? (
             <span className="text-sm font-mono">{cooldown}s</span>
           ) : (
-              <SendHorizonalIcon className="h-6 w-6"/>
+            <SendHorizonalIcon className="h-6 w-6" />
           )}
         </button>
       </div>

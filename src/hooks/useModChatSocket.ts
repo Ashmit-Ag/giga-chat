@@ -6,7 +6,7 @@ import { getSocket } from "@/lib/socket/socket-mod";
 
 export type Message = {
   id: number;
-  sender: "me" | "them";
+  sender: "mod" | "user";
   type: "text" | "image" | "gift";
   text?: string;
   imageUrl?: string;
@@ -17,6 +17,7 @@ export type Message = {
 type ModChat = {
   roomId: string;
   userId: string;
+  userPlan: "Free" | "Basic" | "Premium";
   messages: Message[];
 };
 
@@ -34,15 +35,17 @@ export function useModChatSocket(modName: string) {
     const socket = socketRef.current;
 
     // 🔌 MOD ONLINE
+    console.log("MOD SOCKET", socket)
     socket.emit("mod:online", { modName });
 
     // 🔗 CONNECTED TO USER
-    socket.on("mod:new-chat", ({ roomId, userId }) => {
+    socket.on("mod:new-chat", ({ roomId, userId, userPlan }) => {
       setChats((prev) => [
         ...prev,
         {
           roomId,
           userId,
+          userPlan,
           messages: [],
         },
       ]);
@@ -54,6 +57,8 @@ export function useModChatSocket(modName: string) {
 
     // 📩 RECEIVE MESSAGE FROM USER
     socket.on("chat:message", (msg) => {
+      console.log("MESSAGE RECIEVED",msg)
+      if(msg.sender == "mod") return
       setChats((prev) =>
         prev.map((chat) =>
           chat.roomId === msg.roomId
@@ -63,7 +68,7 @@ export function useModChatSocket(modName: string) {
                 ...chat.messages,
                 {
                   id: msg.id,
-                  sender: "them",
+                  sender: "user",
                   type: msg.type,
                   text: msg.type === "text" ? msg.text : undefined,
                   imageUrl: msg.type === "image" ? msg.text : undefined,
@@ -79,6 +84,7 @@ export function useModChatSocket(modName: string) {
 
 
     socket.on("chat:gift", (msg) => {
+      console.log("GIFT RECIEVED",msg)
       setChats((prev) =>
         prev.map((chat) =>
           chat.roomId === msg.roomId
@@ -88,7 +94,7 @@ export function useModChatSocket(modName: string) {
                 ...chat.messages,
                 {
                   id: msg.id,
-                  sender: "them",
+                  sender: "user",
                   type: msg.type,
                   text: msg.type === "text" ? msg.text : undefined,
                   imageUrl: msg.type === "image" ? msg.text : undefined,
@@ -106,7 +112,7 @@ export function useModChatSocket(modName: string) {
     socket.on("typing", () => setIsTyping(true));
     socket.on("stop:typing", () => setIsTyping(false));
 
-    // ❌ CHAT ENDED
+    // CHAT ENDED
     socket.on("chat:ended", ({ roomId }) => {
       setChats((prev) => prev.filter((c) => c.roomId !== roomId));
     
@@ -130,7 +136,6 @@ export function useModChatSocket(modName: string) {
   // 📤 SEND MESSAGE TO USER
   const sendMessage = (text: string) => {
     if (!text.trim() || !activeRoomId) return;
-
     // Optimistic UI
     setChats((prev) =>
       prev.map((chat) =>
@@ -141,7 +146,7 @@ export function useModChatSocket(modName: string) {
               ...chat.messages,
               {
                 id: Date.now(),
-                sender: "me",
+                sender: "mod",
                 type: "text",
                 text,
               },
@@ -163,6 +168,7 @@ export function useModChatSocket(modName: string) {
       content: text,
     });
 
+    console.log("MESSAGE SENT BY MOD", {activeRoomId, text})
 
     socketRef.current.emit("stop:typing");
   };
@@ -202,7 +208,7 @@ export function useModChatSocket(modName: string) {
                 ...chat.messages,
                 {
                   id: Date.now(),
-                  sender: "me",
+                  sender: "mod",
                   type: "image",
                   imageUrl,
                 },

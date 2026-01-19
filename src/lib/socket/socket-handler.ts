@@ -12,10 +12,12 @@ type ChatPayload =
   | {
     type: "text";
     content: string;
+    roomId: string
   }
   | {
     type: "image";
     content: string; // hosted image URL
+    roomId: string
   }
 
 
@@ -24,11 +26,14 @@ type GiftPayload = {
   amount: number;
   currency: "USD" | "EUR" | "INR";
   giftId?: string;
+  roomId: string
 };
 
 
 export const handleUserNext = (io: SocketIOServer, socket: Socket) => {
   if (socket.data.role !== "user") return;
+
+  // console.log("MESSAGE NEXT MOD")
 
   clearSearch(socket.id);
   // endChat(io, socket);
@@ -75,11 +80,12 @@ export const handleUserNext = (io: SocketIOServer, socket: Socket) => {
     modLoads.set(modSocketId, (modLoads.get(modSocketId) ?? 0) + 1);
     
     // 🔔 NOTIFY BOTH SIDES
-    io.to(roomId).emit("chat:connected", { roomId });
+    socket.emit("chat:connected", { roomId });
 
     modSocket.emit("mod:new-chat", {
       roomId,
       userId: socket.id,
+      userPlan: socket.data.username
     });
     
     console.log("ROOM CREATED:", roomId);
@@ -95,12 +101,19 @@ export const handleMessage = (
   payload: ChatPayload
 ) => {
   const { type, content } = payload;
-  if (!content) return;
+  if (!content) {
+    console.log("ERROR NO CONTENT")
+    return
+  };
 
-  const roomId = socket.data.roomId;
-  if (!roomId) return;
-
-  socket.to(roomId).emit("chat:message", {
+  const roomId = payload.roomId;
+  if (!roomId) {
+    console.log("ERROR NO ROOM ID")
+    return
+  };
+  
+  console.log("MESSAGE SENT")
+  io.to(roomId).emit("chat:message", {
     id: Date.now(),
     sender: socket.data.role,
     type,
@@ -115,8 +128,11 @@ export const handleGiftMessage = (io: SocketIOServer, socket: Socket, payload: G
 
   if (!amount || amount <= 0) return;
 
-  const roomId = socket.data.roomId;
-  if (!roomId) return;
+  const roomId = payload.roomId;
+  if (!roomId) {
+    console.log("NO ROOM ID GIFT", payload)
+    return
+  };
 
   io.to(roomId).emit("chat:gift", {
     id: Date.now(),

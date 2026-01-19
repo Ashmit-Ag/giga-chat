@@ -1,7 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { X, Sparkles, Check, Star, IndianRupee, CheckCircle2, CheckCircle } from 'lucide-react'
+import {
+  X,
+  Sparkles,
+  Check,
+  Star,
+  IndianRupee,
+} from 'lucide-react'
 import { Button } from '../ui/button'
 import { Carousel } from '@mantine/carousel'
 import '@mantine/carousel/styles.css'
@@ -38,6 +44,7 @@ const gradients: Record<string, string> = {
 export default function PremiumModal({ open, onClose }: PremiumModalProps) {
   const [plans, setPlans] = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
+  const [payingPlanId, setPayingPlanId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -52,11 +59,104 @@ export default function PremiumModal({ open, onClose }: PremiumModalProps) {
     fetchPlans()
   }, [open])
 
+  /** 🔑 PAYU FLOW */
+  // const handleChoosePlan = async (planId: string) => {
+  //   try {
+  //     setPayingPlanId(planId)
+
+  //     const res = await fetch('/api/payu/create', {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({ planId }),
+  //     })
+
+  //     if (!res.ok) {
+  //       throw new Error('Failed to initiate payment')
+  //     }
+
+  //     const { action, payload } = await res.json()
+
+  //     // 🔴 PayU requires FORM POST
+  //     const form = document.createElement('form')
+  //     form.method = 'POST'
+  //     form.action = action
+
+  //     Object.entries(payload).forEach(([key, value]) => {
+  //       const input = document.createElement('input')
+  //       input.type = 'hidden'
+  //       input.name = key
+  //       input.value = String(value)
+  //       form.appendChild(input)
+  //     })
+
+  //     document.body.appendChild(form)
+  //     form.submit()
+  //   } catch (err) {
+  //     console.error(err)
+  //     setPayingPlanId(null)
+  //     alert('Unable to start payment. Please try again.')
+  //   }
+  // }
+
+  const handleChoosePlan = async (planId: string) => {
+    try {
+      setPayingPlanId(planId)
+  
+      console.log('Starting payment for plan:', planId)
+  
+      const res = await fetch('/api/payu/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId }),
+      })
+  
+      console.log('PayU create response status:', res.status)
+  
+      const text = await res.text()
+      console.log('PayU raw response:', text)
+  
+      if (!res.ok) {
+        throw new Error(text || 'PayU create failed')
+      }
+  
+      const { action, payload } = JSON.parse(text)
+  
+      console.log('PayU action:', action)
+      console.log('PayU payload:', payload)
+  
+      const form = document.createElement('form')
+      form.method = 'POST'
+      form.action = action
+  
+      Object.entries(payload).forEach(([key, value]) => {
+        if (value === undefined) {
+          console.log("VALUE missing", value)
+          return
+        };
+      
+        const input = document.createElement('input')
+        input.type = 'hidden'
+        input.name = key
+        input.value = value as string
+        form.appendChild(input)
+      })
+      
+  
+      document.body.appendChild(form)
+      form.submit()
+    } catch (err) {
+      console.error('PAYU ERROR:', err)
+      setPayingPlanId(null)
+      alert('Unable to start payment. Please try again.')
+    }
+  }
+  
+
   if (!open) return null
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-center px-4">
-      <div className="relative w-full max-w-md bg-[#0b1022] rounded-[28px] border border-white/10 px-5 py-6">
+      <div className="relative w-full max-w-md bg-[#0b1022] rounded-[28px] border border-white/10 px-3 py-6">
 
         {/* CLOSE */}
         <button
@@ -84,35 +184,24 @@ export default function PremiumModal({ open, onClose }: PremiumModalProps) {
           </div>
         ) : (
           <Carousel
-            slideSize="90%"
+            slideSize="92%"
             slideGap="lg"
-            // align="center"
-            // slidesToScroll={1}
+            withControls={false}
             withIndicators
-            // loop
-            className=""
             styles={{
-              indicators: {
-                bottom: -14
-              },
-              indicator: {
-                width: 18,
-                height: 6,
-                borderRadius: 999
-              }
-              
+              indicators: { bottom: -14 },
+              indicator: { width: 18, height: 6, borderRadius: 999 }
             }}
             classNames={{
               indicator: 'data-[active]:!bg-white data-[passive]:!bg-white'
             }}
           >
-
-
             {plans.map(plan => {
               const features = extractFeatures(plan)
               const gradient =
                 gradients[plan.name] ?? 'from-indigo-500 to-pink-500'
               const isPremium = plan.name === 'Premium'
+              const isPaying = payingPlanId === plan.id
 
               return (
                 <Carousel.Slide key={plan.id}>
@@ -120,7 +209,7 @@ export default function PremiumModal({ open, onClose }: PremiumModalProps) {
                     className={`
                       relative rounded-2xl p-0.5
                       bg-linear-to-br ${gradient}
-                      h-120 mx-2
+                      h-120 mx-1
                     `}
                   >
                     {isPremium && (
@@ -132,7 +221,7 @@ export default function PremiumModal({ open, onClose }: PremiumModalProps) {
 
                     <div className="rounded-2xl bg-[#0e1326] px-6 pt-6 pb-4 flex flex-col h-full">
 
-                      {/* PLAN NAME */}
+                      {/* NAME */}
                       <div className="text-white text-lg font-bold">
                         {plan.name}
                       </div>
@@ -146,7 +235,7 @@ export default function PremiumModal({ open, onClose }: PremiumModalProps) {
                         <span className="text-white/60 text-sm">/month</span>
                       </div>
 
-                      {/* FEATURES (SCROLLABLE) */}
+                      {/* FEATURES */}
                       <div className="mt-5 space-y-3 text-sm text-white/80 overflow-y-auto pr-2 flex-1 amber-scrollbar">
                         {features.map((feature, i) => (
                           <div key={i} className="flex gap-2">
@@ -156,16 +245,17 @@ export default function PremiumModal({ open, onClose }: PremiumModalProps) {
                         ))}
                       </div>
 
-                      {/* CTA (STAYS FIXED) */}
+                      {/* CTA */}
                       <Button
+                        disabled={isPaying}
+                        onClick={() => handleChoosePlan(plan.id)}
                         className={`mt-4 w-full text-base font-bold bg-linear-to-r ${gradient}`}
                       >
-                        Choose Plan
+                        {isPaying ? 'Redirecting…' : 'Choose Plan'}
                       </Button>
                     </div>
                   </div>
                 </Carousel.Slide>
-
               )
             })}
           </Carousel>

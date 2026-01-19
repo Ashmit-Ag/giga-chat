@@ -1,87 +1,105 @@
 import crypto from "crypto";
 
-type CreatePaymentInput = {
+export function createPayUPayload(input: {
   txnid: string;
-  amount: number; // INR
+  amount: number;
   productinfo: string;
   firstname: string;
   email: string;
   phone: string;
-  successUrl: string;
-  failureUrl: string;
-};
+  surl: string;
+  furl: string;
+}) {
+  const key = process.env.PAYU_MERCHANT_KEY!.trim();
+  const salt = process.env.PAYU_SALT!.trim();
+  const amount = input.amount.toFixed(2);
 
-export function createPayUPayload(input: CreatePaymentInput) {
-  const key = process.env.PAYU_MERCHANT_KEY!;
-  const salt = process.env.PAYU_SALT!;
+  // udf fields MUST exist
+  const udf1 = "";
+  const udf2 = "";
+  const udf3 = "";
+  const udf4 = "";
+  const udf5 = "";
 
-  const {
-    txnid,
-    amount,
-    productinfo,
-    firstname,
-    email,
-    successUrl,
-    failureUrl,
-  } = input;
+  /**
+   * EXACT PayU hash formula:
+   * key|txnid|amount|productinfo|firstname|email|
+   * udf1|udf2|udf3|udf4|udf5||||||SALT
+   */
+  const hashString =
+    `${key}|${input.txnid}|${amount}|${input.productinfo}|` +
+    `${input.firstname}|${input.email}|` +
+    `${udf1}|${udf2}|${udf3}|${udf4}|${udf5}` +
+    `||||||${salt}`;
 
-  const hashString = [
-    key,
-    txnid,
-    amount.toFixed(2),
-    productinfo,
-    firstname,
-    email,
-    "", "", "", "", "", "", "", "", "",
-    salt,
-  ].join("|");
+  const hash = crypto
+    .createHash("sha512")
+    .update(hashString, "utf8")
+    .digest("hex");
 
-  const hash = crypto.createHash("sha512").update(hashString).digest("hex");
+  console.log("HASH STRING",hashString)
 
   return {
     key,
-    txnid,
-    amount: amount.toFixed(2),
-    productinfo,
-    firstname,
-    email,
+    txnid: input.txnid,
+    amount,
+    productinfo: input.productinfo,
+    firstname: input.firstname,
+    email: input.email,
     phone: input.phone,
-    surl: successUrl,
-    furl: failureUrl,
+    surl: input.surl,
+    furl: input.furl,
+    udf1,
+    udf2,
+    udf3,
+    udf4,
+    udf5,
     hash,
   };
 }
 
-export async function verifyPayUPayment(
-  txnid: string,
-  amount: number
-): Promise<boolean> {
-  const key = process.env.PAYU_MERCHANT_KEY!;
-  const salt = process.env.PAYU_SALT!;
+/**
+ * 2. Verify Payment Status (Merchant API)
+ */
+export async function verifyPayUPayment(txnid: string): Promise<boolean> {
+  const key = process.env.PAYU_MERCHANT_KEY!.trim();
+  const salt = process.env.PAYU_SALT!.trim();
+
+  /**
+   * Hash format for verification:
+   * key|command|txnid|salt
+   */
   const command = "verify_payment";
+  const hashString = `${key}|${command}|${txnid}|${salt}`;
 
   const hash = crypto
     .createHash("sha512")
-    .update(`${key}|${command}|${txnid}|${salt}`)
+    .update(hashString)
     .digest("hex");
 
-  const body = new URLSearchParams({
-    key,
-    command,
-    hash,
-    var1: txnid,
-  });
-
-  const res = await fetch(process.env.PAYU_VERIFY_URL!, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-  });
+  const res = await fetch(
+    `${process.env.PAYU_BASE_URL}/merchant/postservice.php?form=2`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        key,
+        command,
+        var1: txnid,
+        hash,
+      }),
+    }
+  );
 
   const data = await res.json();
-  const txn = data?.transaction_details?.[txnid];
 
-  if (!txn) return false;
-
-  return txn.status === "success" && Number(txn.amt) === Number(amount);
+  /**
+   * Typical success status:
+   * data.transaction_details[txnid].status === "success"
+   */
+  return (
+    data?.transaction_details?.[txnid]?.status === "success"
+  );
 }

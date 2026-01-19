@@ -43,7 +43,7 @@ export default function ModChatPage() {
                 : "hover:bg-[#141a33]"
               }`}
           >
-            User {chat.userId.slice(0, 6)}
+            User {chat.roomId.slice(0, 6)}
           </div>
         ))}
 
@@ -65,9 +65,6 @@ export default function ModChatPage() {
           }
           onNext={exitChat}
         />
-
-
-
         {/* <RoomList
           rooms={chats}
           activeRoomId={activeRoomId}

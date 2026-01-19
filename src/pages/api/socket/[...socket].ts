@@ -43,11 +43,18 @@ export default function handler(
       }
 
       socket.data.role = role;
+      socket.data.username = null;
       socket.data.rooms = new Set<string>();
       
       if (role === "mod") {
         modLoads.set(socket.id, 0);
       }
+
+      socket.on("user:identify", ({ username }) => {
+        if (!username || typeof username !== "string") return;
+      
+        socket.data.username = username;
+      });      
       
 
       // ==========================
@@ -57,6 +64,7 @@ export default function handler(
 
       socket.on("chat:message", (payload) => {
         if (!payload?.type) return;
+        console.log("MESSAGE SOCKET", payload)
 
         switch (payload.type) {
           case "text":

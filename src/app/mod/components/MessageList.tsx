@@ -4,10 +4,11 @@ import { useEffect, useRef } from "react";
 
 export type Message = {
   id: number;
-  sender: "me" | "them";
+  sender: "mod" | "user";
   type: "text" | "image" | "gift";
   text?: string;
   imageUrl?: string;
+  content?: string;
   amount?: number;
   currency?: "USD" | "EUR" | "INR";
 };
@@ -38,7 +39,7 @@ export default function MessageList({
       )}
 
       {messages.map((m) => {
-        const isMe = m.sender === "me";
+        const isMe = m.sender === "mod";
 
         return (
           <div

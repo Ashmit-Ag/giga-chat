@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 // import { Button } from "@/components/ui/button";
 // import { Switch } from "@/components/ui/switch";
 // import { ChevronDown, Flag, Sparkles, VenusAndMars } from "lucide-react";
@@ -6,7 +6,7 @@ import IdleUI from "./IdleUI";
 
 type Message = {
   id: number;
-  sender: "me" | "them";
+  sender: "mod" | "user";
   type: "text" | "image" | "gift";
   text?: string;
   imageUrl?: string;
@@ -29,6 +29,7 @@ export default function MessageList({
   messages, isTyping, partnerName, searchingText, seconds, connected, chatStatus
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const [openImage, setOpenImage] = useState<string | null | undefined>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -41,20 +42,8 @@ export default function MessageList({
       <div className="flex-1 flex flex-col overflow-y-auto space-y-3 justify-end">
         <div className="flex-1 pt-50" />
 
-        {/* {messages.map((m) =>
-
-          !m.type && (
-            <div key={m.id} className={`flex ${m.sender === "me" ? "justify-end" : "justify-start"}`}>
-              <div className={`px-4 py-2 rounded-2xl max-w-[70%] ${m.sender === "me" ? "bg-indigo-600 text-white" : "bg-white/10 text-white"
-                }`}>
-                {m.text}
-              </div>
-            </div>
-          )
-        )} */}
-
         {messages.map((m) => {
-          const isMe = m.sender === "me";
+          const isMe = m.sender === "user";
 
           return (
             <div
@@ -62,9 +51,9 @@ export default function MessageList({
               className={`flex ${isMe ? "justify-end" : "justify-start"}`}
             >
               {/* TEXT */}
-              {m.type=="text" && (
+              {m.type == "text" && (
                 <div
-                  className={`px-4 py-2 rounded-2xl max-w-[70%] ${isMe
+                  className={`px-4 py-2 rounded-2xl max-w-[70%] wrap-break-word ${isMe
                     ? "bg-indigo-600 text-white"
                     : "bg-white/10 text-white"
                     }`}
@@ -74,15 +63,19 @@ export default function MessageList({
               )}
 
               {/* IMAGE */}
-              {m.type === "image" && m.imageUrl &&(
+              {/* IMAGE */}
+              {m.type === "image" && m.imageUrl && (
                 <div
-                  className={`rounded-2xl overflow-hidden max-w-[70%] border ${isMe ? "border-indigo-500/40" : "border-white/20"
-                    }`}
+                  className={`
+                      rounded-2xl overflow-hidden max-w-[70%] border cursor-pointer
+                      ${isMe ? "border-indigo-500/40" : "border-white/20"}
+                    `}
+                  onClick={() => setOpenImage(m.imageUrl)}
                 >
                   <img
                     src={m.imageUrl}
                     alt="Shared image"
-                    className="max-h-64 object-cover"
+                    className="max-h-64 object-cover hover:opacity-90 transition"
                   />
                 </div>
               )}
@@ -123,12 +116,40 @@ export default function MessageList({
       </div>
 
       <div className="text-center text-white/50 pt-4 mb-14">
-        {searchingText !== null ? (
-          <span className="animate-pulse">Finding someone... {seconds}s</span>
+        {searchingText !== null ? (<>
+          <span className="animate-pulse">Finding someone... {seconds}s</span><br></br>
+          <span>{seconds>30&&"Too slow?.. Get Premium for faster matches"}</span>
+        </>
         ) : (
           !connected && chatStatus === "idle" && "Click below to find someone!"
         )}
       </div>
+      {/* IMAGE MODAL */}
+      {openImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
+          onClick={() => setOpenImage(null)}
+        >
+          <div
+            className="relative max-w-[90vw] max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={openImage}
+              alt="Full view"
+              className="max-w-full max-h-[85vh] rounded-xl"
+            />
+
+            <button
+              onClick={() => setOpenImage(null)}
+              className="absolute top-2 right-2 bg-red-800/70 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-black"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

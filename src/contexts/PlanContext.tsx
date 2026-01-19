@@ -63,7 +63,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
           chats_left: data.limitations.chats_left,
           chat_timer: data.limitations.chat_timer,
           max_friend_req: data.limitations.max_friend_req,
-          min_match_time: data.limitations.min_match_time,
+          min_match_time: 0,
         };
 
         setState(planData);

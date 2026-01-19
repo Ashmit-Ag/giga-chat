@@ -11,6 +11,7 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
+  // url = "postgresql://webepex:WebEpex@777@45.147.96.122:5432/chat_app"
 }
 
 model User {
@@ -114,4 +115,15 @@ model Chat {
 model Image {
   id String @id @default(uuid())
   imageUrl String
+}
+
+model Payment {
+  id String @id @default(uuid())
+  txnid     String
+  userId    String
+  amount    Float
+  type      String  // "PLAN" | "GIFT"
+  refId     String  // planId or giftId
+  status    String  // SUCCESS | FAILED
+  createdAt DateTime @default(now())
 }

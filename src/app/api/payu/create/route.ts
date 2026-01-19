@@ -1,29 +1,57 @@
 import { NextResponse } from "next/server";
-import { createPayUPayload } from "@/lib/payu";
 import crypto from "crypto";
+import { prisma } from "@/lib/prisma";
+import { createPayUPayload } from "@/lib/payu";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export async function POST(req: Request) {
-  const { amount, user } = await req.json();
+  const session = await getServerSession(authOptions);
 
-  if (!amount || amount <= 0) {
-    return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { planId } = await req.json();
+
+  const plan = await prisma.plan.findUnique({
+    where: { id: planId },
+  });
+
+  if (!plan) {
+    return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
   }
 
   const txnid = crypto.randomUUID();
 
-  const payload = createPayUPayload({
-    txnid,
-    amount,
-    productinfo: "Chat Gift",
-    firstname: user.name,
-    email: user.email,
-    phone: user.phone,
-    successUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/payu/success`,
-    failureUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/payu/failure`,
+  // Save pending payment
+  await prisma.payment.create({
+    data: {
+      txnid,
+      userId: session.user.id,
+      amount: plan.price,
+      type: "PLAN",
+      refId: plan.id,
+      status: "PENDING",
+    },
   });
+
+  // ✅ Use helper to generate PayU payload
+  const payuPayload = createPayUPayload({
+    txnid,
+    amount: plan.price,
+    productinfo: `PLAN:${plan.id}`,
+    firstname: session.user.name || "User",
+    email: session.user.email!,
+    phone: "9999999999",
+    surl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/payu/callback`,
+    furl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/payu/callback`,
+  });
+
+  console.log("PAYLOAD", payuPayload)
 
   return NextResponse.json({
     action: `${process.env.PAYU_BASE_URL}/_payment`,
-    payload,
+    payload: payuPayload,
   });
 }

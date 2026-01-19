@@ -10,10 +10,11 @@ import { usePlan } from "@/contexts/PlanContext";
 import { IconX } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import { removeEmojis } from "@/lib/utils";
+import { useSession } from "next-auth/react";
 
 type Message = {
   id: number;
-  sender: "me" | "them";
+  sender: "mod" | "user";
   type: "text" | "image" | "gift";
   text?: string;
   imageUrl?: string;
@@ -23,6 +24,8 @@ type Message = {
 
 
 export default function UserChatPage() {
+  const { data: session, status } = useSession();
+
   const socketRef = useRef(getSocket());
   const typingTimeout = useRef<NodeJS.Timeout | null>(null);
 
@@ -30,14 +33,19 @@ export default function UserChatPage() {
   const [input, setInput] = useState("");
   const [connected, setConnected] = useState(false);
   const [partnerName, setPartnerName] = useState<string | null>(null);
-  const [roomId, setRoomId] = useState<string | null>(null);
+
+  const [myroomId, setRoomId] = useState<string | null>(null);
+  const roomIdRef = useRef<string | null>(null);
+
   const [isTyping, setIsTyping] = useState(false);
   const [searchingText, setSearchingText] = useState<string | null>(null);
   const [seconds, setSeconds] = useState(1);
   const [chatStatus, setChatStatus] = useState<"idle" | "active" | "partner_skipped" | "me_skipped">('idle')
   const { state, decreaseChat } = usePlan()
 
-  const username = "User_" + Math.floor(Math.random() * 1000);
+  const [userEnded, setUserEnded] = useState(false)
+
+  const username = session?.user.email;
   const noChatsLeft =
     connected &&
     state?.chats_left !== undefined &&
@@ -47,25 +55,31 @@ export default function UserChatPage() {
   useEffect(() => {
     // fetch("/api/socket");
     const socket = socketRef.current;
+    console.log("USER SOCKET", socket)
     socket.emit("user:identify", { username });
 
     socket.on("match:searching", (delay: number) => setSearchingText(`Searching...`));
     socket.on("chat:connected", ({ roomId }) => {
       setRoomId(roomId);
+      roomIdRef.current = roomId
       setMessages([]);
       setConnected(true);
       setPartnerName("Random MOD NAME");
       setSearchingText(null);
+      console.log("USER CONNECTED", roomId)
     });
     
     socket.on("chat:message", (msg) => {
-    //  console.log("MESSAGE USER",msg)
-    if (msg.roomId !== roomId) return
+      // console.log("ROOM ID MISSING", msg, myroomId)
+      if (msg.roomId !== roomIdRef.current || msg.sender == "user") {
+      // console.log("MESSAGE USER recieved",msg)
+      return
+    }
       setMessages((prev) => [
         ...prev,
         {
           id: msg.id ?? Date.now(),
-          sender: "them",
+          sender: "mod",
           type: msg.type,
           text: msg.type === "text" ? msg.text : undefined,
           imageUrl: msg.type === "image" ? msg.text : undefined,
@@ -79,6 +93,7 @@ export default function UserChatPage() {
     socket.on("chat:ended", () => {
       setConnected(false);
       setPartnerName(null);
+      if (!userEnded) setChatStatus("partner_skipped")
       setRoomId(null);
     });
     
@@ -106,6 +121,12 @@ export default function UserChatPage() {
     let input = value
     if(!state?.can_send_emojis){
       const filter = removeEmojis(input)
+      notifications.show({
+        title: 'Error',
+        message: 'Upgrade plan to send emojis',
+        icon: <IconX size={18} />,
+        color: 'red',
+      });
       setInput(filter);
     }
     else{
@@ -122,7 +143,7 @@ export default function UserChatPage() {
     if (noChatsLeft) return;
 
     socketRef.current.emit("chat:message", {
-      roomId,
+      roomId:myroomId,
       type: "text",
       content: input,
     });
@@ -132,16 +153,18 @@ export default function UserChatPage() {
       ...prev,
       {
         id: Date.now(),
-        sender: "me",
+        sender: "user",
         type: "text",
         text: input,
       },
     ]);
 
+    console.log("MESSAGE SENT - USER", myroomId)
+
     socketRef.current.emit("stop:typing");
 
     setInput("");
-    await decreaseChat();
+    // await decreaseChat();
   };
 
   const sendImageMessage = async (imageUrl: string) => {
@@ -149,6 +172,7 @@ export default function UserChatPage() {
     if (noChatsLeft) return;
 
     socketRef.current.emit("chat:message", {
+      roomId:myroomId,
       type: "image",
       content: imageUrl,
     });
@@ -159,7 +183,7 @@ export default function UserChatPage() {
       ...prev,
       {
         id: Date.now(),
-        sender: "me",
+        sender: "user",
         type: "image",
         imageUrl: imageUrl,
       },
@@ -179,13 +203,14 @@ export default function UserChatPage() {
       amount,
       currency,
       giftId,
+      roomId:myroomId
     });
 
     setMessages((prev) => [
       ...prev,
       {
         id: Date.now(),
-        sender: "me",
+        sender: "user",
         type: "gift",
         amount: amount,
         currency: currency,
@@ -211,8 +236,8 @@ export default function UserChatPage() {
     setTimeout(() => {
       if (socketRef.current) {
         // socketRef.current.emit("chat:next");
-        if (roomId) {
-          socketRef.current.emit("chat:next", roomId);
+        if (myroomId) {
+          socketRef.current.emit("chat:next", myroomId);
         }        
         socketRef.current.emit("user:next");
       }
@@ -271,9 +296,16 @@ export default function UserChatPage() {
           onChatStart={chatStart}
           onSendImage={sendImageMessage}
           onSendGift={sendGiftMessage}
-          onExit={() => {
-            socketRef.current.emit("chat:next");
+          onExit={()=>{
+            socketRef.current.emit("chat:next", roomIdRef.current);
             setChatStatus("me_skipped")
+            setConnected(false);
+            setMessages([]);
+          }}
+          onExit2={() => {
+            socketRef.current.emit("chat:next", roomIdRef.current);
+            setChatStatus("me_skipped")
+            setUserEnded(true)
             setConnected(false);
             setMessages([]);
           }}
