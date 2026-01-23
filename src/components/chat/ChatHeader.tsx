@@ -144,7 +144,7 @@ export default function ChatHeader({ connected, partnerProfile, searchingText }:
                 {/* <Badge size="xs" color={planColor} radius="sm">
                   {state?.planName}
                 </Badge> */}
-                <PlanBadge planName={"Premium"}/>
+                <PlanBadge planName={"Premium"} />
               </div>
 
               {/* Username / Status */}
@@ -169,7 +169,33 @@ export default function ChatHeader({ connected, partnerProfile, searchingText }:
           }
 
           {/* Interests */}
-          {/* Interests */}
+          {displayedInterests && displayedInterests.length == 0 &&
+            <div className='mt-1 flex items-center gap-1 flex-wrap'>
+              <Button
+                size="xs"
+                variant="subtle"
+                color="indigo"
+                h={18}
+                px={0} // Forces horizontal padding to 0
+                vars={(theme) => ({
+                  root: {
+                    '--button-hover': 'transparent', // Disables the background change
+                    '--button-active': 'transparent', // Disables the click/pressed effect
+                  },
+                })}
+                styles={{
+                  root: {
+                    '&:hover': {
+                      backgroundColor: 'transparent',
+                    },
+                  },
+                }}
+                onClick={() => setEditProfileOpen(true)}
+              >
+                <span>Add Interests</span> <Pencil size={10} className="ml-2" />
+              </Button>
+            </div>
+          }
           {displayedInterests && displayedInterests.length > 0 && (
             <div className="mt-1 flex items-center gap-1 flex-wrap">
               {displayedInterests.map((interest, index) => (
@@ -234,7 +260,7 @@ export default function ChatHeader({ connected, partnerProfile, searchingText }:
       <div className="flex items-center gap-3 relative">
         {connected ? (
           <button
-          disabled={state?.max_friend_req == 0}
+            disabled={state?.max_friend_req == 0}
             className="px-3 text-xs rounded-md font-medium hover:bg-white/10 text-white disabled:text-white/50"
           >
             <UserPlus2Icon size={24} />

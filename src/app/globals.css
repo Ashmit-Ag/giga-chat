@@ -184,6 +184,11 @@ body{
   box-shadow: 0 0 0 1px #6366f1 !important;
 }
 
+.mantine-Pill-root{
+  background: #3337fa !important;
+  color: white !important;
+}
+
 /* Ensure the label matches your reference text-gray-300 */
 .mantine-PillsInput-label {
   color: #d1d5db !important;

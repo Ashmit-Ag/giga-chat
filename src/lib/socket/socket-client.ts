@@ -6,6 +6,9 @@ export function getSocket() {
   if (!socket) {
     socket = io({
       path: "/api/socket/io",
+      addTrailingSlash: false,
+      transports: ["websocket"],
+      upgrade: false,
       auth: {
         role: "user"
       }

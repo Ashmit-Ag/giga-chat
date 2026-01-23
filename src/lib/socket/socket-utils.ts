@@ -37,34 +37,34 @@ export const clearSearch = (socketId: string) => {
 // ==============================
 // End chat & cleanup room
 // ==============================
-export const endChat = (
-  io: SocketIOServer,
-  roomId: string
-) => {
+export const endChat = (io: SocketIOServer, roomId: string) => {
   const chat = activeChats.get(roomId);
-  if (!chat) return;
+  if (!chat) {
+    console.warn(`[END_CHAT_FAIL] Room ${roomId} not found in activeChats`);
+    return;
+  }
 
   const { userId, modId } = chat;
-
   const userSocket = io.sockets.sockets.get(userId);
   const modSocket = io.sockets.sockets.get(modId);
 
-  // 🔔 Notify both
+  // Emit to the room first before closing it
   io.to(roomId).emit("chat:ended", { roomId });
 
-  // 🚪 Leave room
-  userSocket?.leave(roomId);
-  modSocket?.leave(roomId);
+  // Safety checks before calling .leave()
+  if (userSocket) {
+    userSocket.leave(roomId);
+    userSocket.data.rooms?.delete(roomId);
+  }
 
-  // 🧹 Remove room from socket data
-  userSocket?.data.rooms?.delete(roomId);
-  modSocket?.data.rooms?.delete(roomId);
-
-  // ♻️ Decrease mod load
-  modLoads.set(
-    modId,
-    Math.max(0, (modLoads.get(modId) ?? 1) - 1)
-  );
+  if (modSocket) {
+    modSocket.leave(roomId);
+    modSocket.data.rooms?.delete(roomId);
+    // Only decrease load if the mod is still "alive"
+    const currentLoad = modLoads.get(modId) ?? 1;
+    modLoads.set(modId, Math.max(0, currentLoad - 1));
+  }
 
   activeChats.delete(roomId);
+  console.log(`[CLEANUP] Room ${roomId} closed. Mod ${modId} load decreased.`);
 };

@@ -33,63 +33,64 @@ type GiftPayload = {
 export const handleUserNext = (io: SocketIOServer, socket: Socket) => {
   if (socket.data.role !== "user") return;
 
-  // console.log("MESSAGE NEXT MOD")
-
+  console.log(`[QUEUE] User ${socket.id} started searching...`);
   clearSearch(socket.id);
-  // endChat(io, socket);
-  // freeMods.delete(socket.id);
 
-  // Matchmaking delay: 3-12 minutes based on your code (3*60*10 to 12*60*10)
-  // Note: Your original math was (min 3000ms to 7200ms). Adjust if needed.
-  const min = 3 * 60 * 10;
-  const max = 12 * 60 * 10;
+  // Math check: Your delay was quite short (1.8s to 7.2s). 
+  // For production, ensure this isn't getting killed by Vercel timeouts.
+  const min = 3000; 
+  const max = 7200;
   const delay = Math.floor(Math.random() * (max - min + 1)) + min;
 
   socket.emit("match:searching", delay);
 
   const timeout = setTimeout(() => {
-    // const modSocketId = [...freeMods].find((id) => id !== socket.id);
-    const modSocketId = [...modLoads.entries()]
-  .filter(([_, count]) => count < MAX_CHATS_PER_MOD)
-  .sort((a, b) => a[1] - b[1])[0]?.[0];
+    // Debug: Check if any mods actually exist in memory
+    console.log(`[MATCHMAKING] Current Mod Loads Map Size: ${modLoads.size}`);
+    
+    const availableMods = [...modLoads.entries()]
+      .filter(([_, count]) => count < MAX_CHATS_PER_MOD)
+      .sort((a, b) => a[1] - b[1]);
+
+    const modSocketId = availableMods[0]?.[0];
+
     if (!modSocketId) {
+      console.warn(`[MATCHMAKING_FAIL] No mods in memory for User ${socket.id}`);
       socket.emit("no-mod-available");
       return;
     }
-    
+
     const modSocket = io.sockets.sockets.get(modSocketId);
-    if (!modSocket) return;
-    
-    // 🔑 CREATE ROOM
+    if (!modSocket) {
+      console.error(`[MATCHMAKING_FAIL] Mod ${modSocketId} found in Map but socket is missing from IO`);
+      modLoads.delete(modSocketId); // Clean up stale data
+      return;
+    }
+
     const roomId = `chat_${socket.id}_${modSocketId}`;
     
-    // 🔑 JOIN ROOM (THIS WAS MISSING)
+    // Join logic
     socket.join(roomId);
     modSocket.join(roomId);
     
-    // 🔑 STORE ROOM ID
+    // Use optional chaining for the Set in case it wasn't initialized
+    if (!socket.data.rooms) socket.data.rooms = new Set();
+    if (!modSocket.data.rooms) modSocket.data.rooms = new Set();
+    
     socket.data.rooms.add(roomId);
     modSocket.data.rooms.add(roomId);
     
-    // 🔑 TRACK ACTIVE CHAT
-    activeChats.set(roomId, {
-      userId: socket.id,
-      modId: modSocketId,
-    });
-
+    activeChats.set(roomId, { userId: socket.id, modId: modSocketId });
     modLoads.set(modSocketId, (modLoads.get(modSocketId) ?? 0) + 1);
     
-    // 🔔 NOTIFY BOTH SIDES
     socket.emit("chat:connected", { roomId });
-
     modSocket.emit("mod:new-chat", {
       roomId,
       userId: socket.id,
       userPlan: socket.data.username
     });
     
-    console.log("ROOM CREATED:", roomId);
-    
+    console.log(`[SUCCESS] Room Created: ${roomId}`);
   }, delay);
 
   searchTimeouts.set(socket.id, timeout);
