@@ -6,7 +6,7 @@ import {
   searchTimeouts,
   endChat,
   clearSearch
-} from "./socket-utils";
+} from "./socket-utils.js";
 
 type ChatPayload =
   | {
