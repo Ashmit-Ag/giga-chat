@@ -54,51 +54,14 @@ export default function PremiumModal({ open, onClose }: PremiumModalProps) {
     const fetchPlans = async () => {
       const res = await fetch('/api/admin/plans')
       const data = await res.json()
-      setPlans(data.filter((p: Plan) => p.name !== 'Free'))
+      console.log("PLANS", data)
+      // setPlans(data.filter((p: Plan) => p.name !== 'Free'))
       setLoading(false)
     }
 
     fetchPlans()
   }, [open])
 
-  /** 🔑 PAYU FLOW */
-  // const handleChoosePlan = async (planId: string) => {
-  //   try {
-  //     setPayingPlanId(planId)
-
-  //     const res = await fetch('/api/payu/create', {
-  //       method: 'POST',
-  //       headers: { 'Content-Type': 'application/json' },
-  //       body: JSON.stringify({ planId }),
-  //     })
-
-  //     if (!res.ok) {
-  //       throw new Error('Failed to initiate payment')
-  //     }
-
-  //     const { action, payload } = await res.json()
-
-  //     // 🔴 PayU requires FORM POST
-  //     const form = document.createElement('form')
-  //     form.method = 'POST'
-  //     form.action = action
-
-  //     Object.entries(payload).forEach(([key, value]) => {
-  //       const input = document.createElement('input')
-  //       input.type = 'hidden'
-  //       input.name = key
-  //       input.value = String(value)
-  //       form.appendChild(input)
-  //     })
-
-  //     document.body.appendChild(form)
-  //     form.submit()
-  //   } catch (err) {
-  //     console.error(err)
-  //     setPayingPlanId(null)
-  //     alert('Unable to start payment. Please try again.')
-  //   }
-  // }
 
   const handleChoosePlan = async (planId: string, planName: string) => {
     try {

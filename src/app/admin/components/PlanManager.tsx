@@ -18,7 +18,17 @@ export default function PlanManager() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchPlans(); }, []);
+  useEffect(() => { 
+    const fetchPlans = async () => {
+      setLoading(true);
+      const res = await fetch('/api/admin/plans');
+      const data = await res.json();
+      setPlans(data);
+      setLoading(false);
+    };
+  
+    fetchPlans(); 
+  }, []);
 
   const handleUpdate = async (plan: any) => {
     setUpdatingId(plan.id);
@@ -36,7 +46,7 @@ export default function PlanManager() {
   if (loading) return <div className="p-6 text-white/50">Loading Plans...</div>;
 
   return (
-    <div className="flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar">
+    <div className="flex flex-col gap-6 pr-2 pb-20 h-full overflow-y-auto scrollbar-indigo">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Manage Subscriptions</h2>
         <Button size="sm" className='hover:bg-indigo-700' onClick={fetchPlans}><RefreshCw size={14} className="mr-2 "/> Sync</Button>

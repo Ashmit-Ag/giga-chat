@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import Cookies from 'js-cookie';
 
 interface PlanLimitations {
-  planName: string;
+  planName: "Free" | "Basic" | "Premium";
   pfp_edit: boolean;
   name_edit: boolean;
   can_send_gifs: boolean;

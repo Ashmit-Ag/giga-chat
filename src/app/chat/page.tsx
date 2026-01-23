@@ -57,7 +57,7 @@ export default function UserChatPage() {
   useEffect(() => {
     // fetch("/api/socket");
     const socket = socketRef.current;
-    console.log("USER SOCKET", socket)
+    // console.log("USER SOCKET", socket)
     socket.emit("user:identify", { username });
 
     socket.on("match:searching", (delay: number) => setSearchingText(`Searching...`));

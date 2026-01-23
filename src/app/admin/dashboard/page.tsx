@@ -74,7 +74,7 @@ export default function Page() {
         </header>
 
         {/* DYNAMIC CONTENT AREA */}
-        <div className="flex-1 p-6 overflow-hidden">
+        <div className="flex-1 p-6">
           {activeTab === 'dashboard' && <DashboardOverview onEditPlans={() => setActiveTab('plans')} />}
           {activeTab === 'plans' && <PlanManager />}
           {activeTab === 'users' && <div className="text-white/40 italic">User Management coming soon...</div>}

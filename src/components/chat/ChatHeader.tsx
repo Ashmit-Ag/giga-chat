@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Badge, Button } from '@mantine/core';
 import EditProfileModal from './EditProfileModal';
 import { RandomUserProfile } from '@/hooks/useModChatSocket';
+import PlanBadge from '../ui/planBadge';
 
 interface ChatHeaderProps {
   connected: boolean;
@@ -140,9 +141,10 @@ export default function ChatHeader({ connected, partnerProfile, searchingText }:
                   {data?.user?.firstName} {data?.user?.lastName}
                 </h2>
 
-                <Badge size="xs" color={planColor} radius="sm">
+                {/* <Badge size="xs" color={planColor} radius="sm">
                   {state?.planName}
-                </Badge>
+                </Badge> */}
+                <PlanBadge planName={"Premium"}/>
               </div>
 
               {/* Username / Status */}
