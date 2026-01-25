@@ -1,0 +1,21 @@
+{
+    "crons": [
+      {
+        "path": "/api/cron/reset-daily-chats",
+        "schedule": "0 0 * * *"
+      },
+      {
+        "path": "/api/cron/expire-plans",
+        "schedule": "0 1 * * *"
+      },
+      {
+        "path": "/api/cron/failed-renewals",
+        "schedule": "0 2 * * *"
+      },
+      {
+        "path": "/api/cron/apply-pending-downgrades",
+        "schedule": "0 3 * * *"
+      }
+    ]
+  }
+  

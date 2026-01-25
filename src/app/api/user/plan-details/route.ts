@@ -40,7 +40,8 @@ export async function GET() {
           chats_left: Math.max(0, 20 - user.chatCount),
           chat_timer: 30,
           max_friend_req: 0,
-          min_match_time: 90
+          min_match_time: 90,
+          gender_filter:"random"
         }
       });
     }
@@ -59,6 +60,7 @@ export async function GET() {
         chat_timer: plan.chatTimer,
         max_friend_req: plan.maxFriendReq,
         min_match_time: plan.minMatchTime,
+        gender_filter: user.genderMatch
       }
     });
 

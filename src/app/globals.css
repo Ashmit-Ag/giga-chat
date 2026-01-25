@@ -245,3 +245,97 @@ body{
     rgba(99, 102, 241, 0.9)
   );
 }
+
+
+/* ===============================
+   Custom Select (Dark Theme)
+   =============================== */
+
+ /* ===============================
+   Custom Select (Dark Indigo Theme)
+   =============================== */
+
+.select-dark {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: rgba(0, 0, 0, 0.3);
+
+  padding: 0.75rem 2.5rem 0.75rem 1rem;
+  color: #ffffff;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Placeholder option */
+.select-dark option[value=""] {
+  color: #a1a1aa;
+  background-color: #1e1b4b; /* dark indigo */
+}
+
+/* Focus */
+.select-dark:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 1px #6366f1;
+}
+
+/* Hover */
+.select-dark:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Disabled */
+.select-dark:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ===============================
+   Options Styling
+   =============================== */
+
+/* Default option background */
+.select-dark option,
+.select-dark option:disabled {
+  background-color: #1e1b4b; /* indigo-950 */
+  color: #ffffff;
+}
+
+/* Hovered option (Chromium / Firefox) */
+.select-dark option:hover,
+.select-dark option:focus,
+.select-dark option:checked {
+  background-color: #3730a3; /* indigo-700 */
+  color: #ffffff;
+}
+
+/* ===============================
+   Wrapper Chevron
+   =============================== */
+
+.select-wrapper {
+  position: relative;
+}
+
+.select-wrapper::after {
+  content: '';
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+
+  width: 0.75rem;
+  height: 0.75rem;
+
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7' /%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: contain;
+}

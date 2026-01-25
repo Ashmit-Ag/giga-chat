@@ -5,6 +5,7 @@ import MessageList from "../components/MessageList";
 import ChatInput from "../components/ChatInput";
 import { useModChatSocket } from "@/hooks/useModChatSocket";
 import RoomList from "../components/RoomList";
+import FriendsSidebar from "../components/FriendsSidebar";
 
 export default function ModChatPage() {
   const modName = "Moderator_" + Math.floor(Math.random() * 100);
@@ -19,6 +20,7 @@ export default function ModChatPage() {
     handleTyping,
     exitChat,
     sendImageMessage,
+    sendFriendRequest
   } = useModChatSocket(modName);
 
   const activeChat = chats.find(
@@ -38,14 +40,15 @@ export default function ModChatPage() {
             key={chat.roomId}
             onClick={() => setActiveRoomId(chat.roomId)}
             className={`p-3 cursor-pointer border-b border-white/5
-              ${chat.roomId === activeRoomId
+                ${chat.roomId === activeRoomId
                 ? "bg-[#1a2040]"
                 : "hover:bg-[#141a33]"
               }`}
           >
-            User {chat.roomId.slice(0, 6)}
+            {chat.userDetails?.firstName ?? "Loading..."}
           </div>
         ))}
+
 
         {chats.length === 0 && (
           <div className="p-4 text-sm text-gray-400">
@@ -58,13 +61,15 @@ export default function ModChatPage() {
       <div className="flex flex-col flex-1">
         <ModChatHeader
           connected={!!activeRoomId}
-          partner={
-            activeChat
-              ? { name: `User ${activeChat.userId.slice(0, 6)}` }
-              : null
-          }
+          userDetails={activeChat?.userDetails ?? null}
+          randomProfile={activeChat?.userProfile ?? null}
           onNext={exitChat}
+          roomId={activeChat?.roomId || ""}
+          sendFriendRequest={sendFriendRequest}
         />
+
+        
+
         {/* <RoomList
           rooms={chats}
           activeRoomId={activeRoomId}
@@ -87,6 +92,7 @@ export default function ModChatPage() {
           onImageSend={sendImageMessage}
         />
       </div>
+      <FriendsSidebar/>
     </div>
   );
 }

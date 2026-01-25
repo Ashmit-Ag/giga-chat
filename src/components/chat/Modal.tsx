@@ -48,6 +48,19 @@ export default function PremiumModal({ open, onClose }: PremiumModalProps) {
   const [payingPlanId, setPayingPlanId] = useState<string | null>(null)
   const { state } = usePlan();
 
+  const getCta = (planName: string) => {
+    if (state?.planName === planName) {
+      return { label: 'Current Plan', disabled: true }
+    }
+  
+    if (state?.planName === 'Premium' && planName === 'Basic') {
+      return { label: 'Downgrade', disabled: false }
+    }
+  
+    return { label: 'Choose Plan', disabled: false }
+  }
+  
+
   useEffect(() => {
     if (!open) return
 
@@ -55,7 +68,7 @@ export default function PremiumModal({ open, onClose }: PremiumModalProps) {
       const res = await fetch('/api/admin/plans')
       const data = await res.json()
       console.log("PLANS", data)
-      // setPlans(data.filter((p: Plan) => p.name !== 'Free'))
+      setPlans(data.filter((p: Plan) => p.name !== 'Free'))
       setLoading(false)
     }
 

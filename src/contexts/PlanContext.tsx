@@ -20,6 +20,7 @@ interface PlanLimitations {
   chat_timer: number;
   max_friend_req: number;
   min_match_time: number;
+  gender_filter:"male" | "female" | "random"
 }
 
 interface PlanContextType {
@@ -67,10 +68,11 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
           can_send_emojis: data.limitations.can_send_emojis,
           chat_cooldown: data.limitations.chat_cooldown,
           chats_left: data.limitations.chats_left,
-          // chat_timer: data.limitations.chat_timer,
-          chat_timer: 0,
+          chat_timer: data.limitations.chat_timer,
+          // chat_timer: 0,
           max_friend_req: data.limitations.max_friend_req,
           min_match_time: data.limitations.min_match_time ?? 0,
+          gender_filter: data.limitations.gender_filter
         };
 
         setState(planData);

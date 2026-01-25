@@ -11,6 +11,7 @@ import {
 } from '@mantine/core';
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
+import PremiumModal from './Modal';
 
 interface EditProfileModalProps {
   opened: boolean;
@@ -25,45 +26,133 @@ export default function EditProfileModal({
   const { state } = usePlan();
 
   const [username, setUsername] = useState('');
-  const [interests, setInterests] = useState<string[]>([]);
-  const [interestValue, setInterestValue] = useState('');
   const [avatar, setAvatar] = useState<string | null>(null);
+  const [profile, setProfile] = useState<any>(null);
+
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [gender, setGender] = useState('');
+  const [city, setCity] = useState('');
+  const [stateValue, setStateValue] = useState('');
+  const [chatCount, setchatCount] = useState('');
+
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [loading, setLoading] = useState(false);
+
+
   /* -------------------- Initialize From Session -------------------- */
   useEffect(() => {
-    if (opened && session?.user) {
-      setUsername(session.user.userName ?? '');
-      setInterests(session.user.interests ?? []);
-      setAvatar(session.user.image ?? null);
-      setError(null);
-    }
-  }, [opened, session]);
+    if (!opened) return;
 
-  /* -------------------- Save Handler -------------------- */
+    const fetchUser = async () => {
+      try {
+        setLoading(true)
+        const res = await fetch('/api/user/user-details');
+        const data = await res.json();
+
+        console.log("USER DATA", data)
+
+        setProfile(data);
+
+        setUsername(data.data.userName ?? '');
+        setFirstName(data.data.firstName ?? '');
+        setLastName(data.data.lastName ?? '');
+        setCity(data.data.city ?? '');
+        setStateValue(data.data.state ?? '');
+        setAvatar(data.data.pfpUrl ?? null);
+        setchatCount(data.data.chatCount)
+        // setGender((data.data.gender))
+        setGender(
+          data.data.gender
+            ? data.data.gender.charAt(0).toUpperCase() +
+            data.data.gender.slice(1).toLowerCase()
+            : ''
+        );
+
+
+        setError(null);
+      } catch (err) {
+        console.error(err);
+        setError('Failed to load profile');
+      }
+      finally {
+        setLoading(false)
+      }
+    };
+
+    fetchUser();
+  }, [opened]);
+
+
+  /* -------------------- Handlers -------------------- */
+  const handleCancelPlan = async () => {
+    try {
+      await fetch('/api/payu/cancel-subscription', {
+        method: 'POST',
+      });
+
+      onClose(); // close EditProfileModal
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDowngradePlan = async () => {
+    try {
+      await fetch('/api/payu/downgrade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          planId: 'jnwsdjkbn3kbribt4jb34un',
+        }),
+      });
+
+      onClose(); // close EditProfileModal
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+
   const handleSave = async () => {
     setSaving(true);
     setError(null);
 
     const payload: Record<string, any> = {};
 
-    if (state?.name_edit && username.trim()) {
+    if (username.trim() && username !== profile?.userName) {
       payload.username = username.trim();
     }
 
-    if (interests.length > 0) {
-      payload.interests = interests;
+    if (firstName.trim() && firstName !== profile?.firstName) {
+      payload.firstName = firstName.trim();
     }
 
-    if (avatar) {
+    if (lastName.trim() && lastName !== profile?.lastName) {
+      payload.lastName = lastName.trim();
+    }
+
+    if (gender && gender !== profile?.gender) {
+      payload.gender = gender;
+    }
+
+    if (city.trim() && city !== profile?.city) {
+      payload.city = city.trim();
+    }
+
+    if (stateValue.trim() && stateValue !== profile?.state) {
+      payload.state = stateValue.trim();
+    }
+
+    if (avatar && avatar !== profile?.image) {
       payload.avatar = avatar;
     }
 
     if (Object.keys(payload).length === 0) {
       setSaving(false);
-      onClose();
       return;
     }
 
@@ -74,10 +163,7 @@ export default function EditProfileModal({
         body: JSON.stringify(payload),
       });
 
-      let data: any = null;
-      try {
-        data = await res.json();
-      } catch { }
+      const data = await res.json();
 
       if (!res.ok) {
         setError(data?.error || 'Failed to update profile');
@@ -86,120 +172,199 @@ export default function EditProfileModal({
 
       await update({
         user: {
-          ...session?.user, // 🔥 THIS IS REQUIRED
+          ...session?.user,
           ...(payload.username && { userName: payload.username }),
-          ...(payload.interests && { interests: payload.interests }),
-          ...(payload.avatar && { image: payload.avatar }),
+          ...(payload.firstName && { firstName: payload.firstName }),
+          ...(payload.lastName && { lastName: payload.lastName }),
+          ...(payload.gender && { gender: payload.gender }),
         },
       });
-      
-      
-      
-
-      onClose();
     } catch (err) {
       console.error(err);
-      setError('Something went wrong. Please try again.');
+      setError('Something went wrong');
     } finally {
       setSaving(false);
     }
   };
 
+
   return (
-    <Modal
-      opened={opened}
-      onClose={onClose}
-      title="Profile Settings"
-      centered
-      overlayProps={{ opacity: 0.55, blur: 3 }}
-      styles={{
-        content: { backgroundColor: '#0e1326' },
-        header: { backgroundColor: '#0e1326' },
-        title: { color: 'white' },
-      }}
-    >
-      {/* Avatar */}
-      <Group justify="center" mb="md">
-        <Avatar
-          size={80}
-          radius="xl"
-          src={avatar || undefined}
-          className="cursor-pointer"
-        />
-      </Group>
-
-      {/* Username */}
-      {!state?.name_edit && (
-        <p className="mb-1 text-sm text-red-400">
-          Username editing is disabled on the free plan
-        </p>
-      )}
-
-      <input
-        value={username}
-        disabled={!state?.name_edit}
-        onChange={(e) => setUsername(e.currentTarget.value)}
-        placeholder={session?.user?.userName || 'Username'}
-        className="mb-1 w-full rounded-lg border border-white/10 bg-black/30 px-4 py-2 text-white focus:ring-1 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
-      />
-
-      {/* Interests */}
-      <PillsInput
-        label="Interests"
-        mt="sm"
-        classNames={{
-          root: '',
-          // We handle 'input' and 'label' styling via globals.css now
+    <>
+      <Modal
+        opened={opened}
+        onClose={onClose}
+        title="Profile Settings"
+        centered
+        overlayProps={{ opacity: 0.55, blur: 3 }}
+        styles={{
+          content: { backgroundColor: '#0e1326' },
+          header: { backgroundColor: '#0e1326' },
+          title: { color: 'white' },
         }}
       >
-        <Pill.Group>
-          {interests.map((item, index) => (
-            <Pill
-              key={index}
-              withRemoveButton
-              classNames={{
-                root: 'bg-white/10 border border-white/10 text-white rounded-md',
-                remove: 'text-gray-400 hover:text-red-400',
-              }}
-              onRemove={() => setInterests(interests.filter((_, i) => i !== index))}
-            >
-              {item}
-            </Pill>
-          ))}
-
-          <PillsInput.Field
-            value={interestValue}
-            onChange={(e) => setInterestValue(e.currentTarget.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && interestValue.trim()) {
-                e.preventDefault();
-                if (!interests.includes(interestValue.trim())) {
-                  setInterests([...interests, interestValue.trim()]);
-                }
-                setInterestValue('');
-              }
-            }}
-            placeholder="Type and press Enter"
-            className="bg-transparent text-white focus:outline-none"
+        {/* Avatar */}
+        <Group justify="center" mb="md">
+          <Avatar
+            size={80}
+            radius="xl"
+            src={avatar || undefined}
+            className="cursor-pointer"
           />
-        </Pill.Group>
-      </PillsInput>
+        </Group>
 
 
-      {/* Error */}
-      {error && (
-        <p className="mb-3 text-sm text-red-400">{error}</p>
-      )}
 
-      {/* Actions */}
-      <Group justify="center" mt="lg">
-        <Button variant="default" onClick={onClose} disabled={saving}style={{borderRadius:"8px"}}>
-          Cancel
-        </Button>
-        <Button loading={saving} onClick={handleSave} className='rounded-lg' style={{borderRadius:"8px", backgroundColor:"#4f39f6"}}>
-          Save
-        </Button>
-      </Group>
-    </Modal>
+        {/* Interests */}
+        <div className="space-y-3">
+          {/* Username */}
+          {!state?.name_edit && (
+            <p className="mb-1 text-sm text-red-400">
+              Username editing is disabled on the free plan
+            </p>
+          )}
+
+          <input
+            value={username}
+            disabled={!state?.name_edit}
+            onChange={(e) => setUsername(e.currentTarget.value)}
+            placeholder={session?.user?.userName || 'Username'}
+            className="w-full rounded-lg border border-white/10 bg-black/30 px-4 py-2 text-white focus:ring-1 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+          />
+
+          <input
+            value={firstName}
+            onChange={(e) => setFirstName(e.currentTarget.value)}
+            placeholder={session?.user?.firstName || 'First Name'}
+            className="w-full rounded-lg border border-white/10 bg-black/30 px-4 py-2 text-white focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
+
+          <input
+            value={lastName}
+            onChange={(e) => setLastName(e.currentTarget.value)}
+            placeholder={session?.user?.lastName || 'Last Name'}
+            className="w-full rounded-lg border border-white/10 bg-black/30 px-4 py-2 text-white focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
+          <div className="relative">
+            <select
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+              className="select-dark"
+            >
+              <option value="" disabled>
+                Select gender
+              </option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+
+            {/* Chevron */}
+            <svg
+              className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+
+
+
+
+          <input
+            value={city}
+            onChange={(e) => setCity(e.currentTarget.value)}
+            placeholder={city || "City"}
+            className="w-full rounded-lg border border-white/10 bg-black/30 px-4 py-2 text-white focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
+
+          <input
+            value={stateValue}
+            onChange={(e) => setStateValue(e.currentTarget.value)}
+            placeholder={stateValue || "State"}
+            className="w-full rounded-lg border border-white/10 bg-black/30 px-4 py-2 text-white focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
+        </div>
+
+        <div className="mt-6 rounded-lg border border-white/10 bg-white/5 p-4 flex items-center justify-between">
+
+          <div className='flex gap-4'>
+
+            <div>
+              <p className="text-sm font-medium text-white">Current Plan</p>
+              <p className="text-xs text-zinc-400">
+                {state?.planName ?? 'Free'}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium text-white">Chats Left</p>
+              <p className="text-xs text-zinc-400">
+                {loading ? "Loading..." : (Number(chatCount) > 1000 ? "Inf" : chatCount)}
+              </p>
+            </div>
+
+          </div>
+
+          <div className="flex gap-2">
+
+            {/* BASIC */}
+            {state?.planName === 'Basic' && (
+              <>
+                <Button
+                  size="xs"
+                  color="red"
+                  variant="light"
+                  onClick={handleCancelPlan}
+                >
+                  Cancel Plan
+                </Button>
+              </>
+            )}
+
+            {/* PREMIUM */}
+            {state?.planName === 'Premium' && (
+              <>
+                {/* <Button
+                size="xs"
+                variant="light"
+                onClick={handleDowngradePlan}
+              >
+                Downgrade
+              </Button> */}
+                <Button
+                  size="xs"
+                  color="red"
+                  variant="light"
+                  onClick={handleCancelPlan}
+                >
+                  Cancel Plan
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+
+
+
+
+
+        {/* Error */}
+        {error && (
+          <p className="mb-3 text-sm text-red-400">{error}</p>
+        )}
+
+        {/* Actions */}
+        <Group justify="center" mt="lg">
+          <Button variant="default" onClick={onClose} disabled={saving} style={{ borderRadius: "8px" }}>
+            Cancel
+          </Button>
+          <Button loading={saving} onClick={handleSave} className='rounded-lg' style={{ borderRadius: "8px", backgroundColor: "#4f39f6" }}>
+            Save
+          </Button>
+        </Group>
+      </Modal>
+    </>
   );
 }

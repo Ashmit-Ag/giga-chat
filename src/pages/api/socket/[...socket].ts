@@ -68,7 +68,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponseWithSoc
         }
 
         io.to(roomId).emit("chat:user-profile", { roomId, userProfile });
-        console.log(`[PROFILE_SYNC] Shared profile to room ${roomId}`);
+        // console.log(`[PROFILE_SYNC] Shared profile to room ${roomId}`);
       });
 
       socket.on("user:next", async () => {

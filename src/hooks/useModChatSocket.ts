@@ -23,11 +23,28 @@ export type RandomUserProfile = {
   city: string;
 };
 
+export type UserDetails = {
+  username: string;
+  firstName: string;
+  lastName: string;
+  gender: string | null;
+  interests: string[];
+  city: string | null;
+  state: string | null;
+  age: number;
+  avatarUrl: string | null;
+  totalGiftAmount: number;
+  planName: string | null;
+  genderMatch: "male" | "female" | "random" | null,
+};
+
+
 type ModChat = {
   roomId: string;
   userId: string;
   userPlan: "Free" | "Basic" | "Premium";
   userProfile: RandomUserProfile;
+  userDetails?: UserDetails;
   messages: Message[];
 };
 
@@ -46,41 +63,117 @@ export function useModChatSocket(modName: string) {
     const socket = socketRef.current;
 
     // 🔌 MOD ONLINE
-    console.log("MOD SOCKET", socket)
+    // console.log("MOD SOCKET", socket)
     socket.emit("mod:online", { modName });
 
-    // 🔗 CONNECTED TO USER
-    socket.on("mod:new-chat", ({ roomId, userId, userPlan }) => {
-      const userProfile = generateRandomUser();
+    socket.on("friend:request-received", ({  roomId:reff }) => {
+      const accepted = confirm(`You received a friend request. Accept karoge? ${reff}`);
     
+      if (!accepted) return;
+    
+      socket.emit("friend:request:accepted", {
+        reff,
+      });
+    
+      // ✅ ADD FRIEND (MOD / USER)
+      // await fetch("/api/friends/add", {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({ friendId: fromUserId }),
+      // });
+    });
+
+    socket.on("friend:request:accepted", ({ friendId }) => {
+      alert("Friend request accepted 🎉");
+    
+      // ✅ ADD FRIEND (OTHER SIDE)
+      // await fetch("/api/friends/add", {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({ friendId }),
+      // });
+    });
+
+    // 🔗 CONNECTED TO USER
+    socket.on("mod:new-chat", async ({ roomId, userId, userGenderSelected }) => {
+
+
+      let userDetails: UserDetails;
+
+      try {
+        const res = await fetch("/api/mod/get-user", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          userDetails = data.user;
+        } else {
+          console.error("Failed to fetch user details");
+          userDetails = {
+            username: "",
+            firstName: "",
+            lastName: "",
+            interests: [],
+            city:"",
+            state:"",
+            avatarUrl:"",
+            planName:"",
+            age: 18,
+            gender:"",
+            genderMatch:"random",
+            totalGiftAmount: 0
+          };
+        }
+      } catch (err) {
+        console.error("USER FETCH ERROR:", err);
+        userDetails = {
+          username: "",
+          firstName: "",
+          lastName: "",
+          interests: [],
+          city:"",
+          state:"",
+          avatarUrl:"",
+          planName:"",
+          age: 18,
+          gender:"",
+          genderMatch:"random",
+          totalGiftAmount: 0
+        };
+      }
+
+      // 🧠 Create chat WITH userDetails
       setChats((prev) => [
         ...prev,
         {
           roomId,
           userId,
-          userPlan,
-          userProfile,
+          userPlan: userGenderSelected,
+          userProfile,   // random profile
+          userDetails,   // real DB user (may be null initially)
           messages: [],
         },
       ]);
-    
-      // 📤 Send profile to USER
-      console.log("RANDOM USER DETAIL", userProfile)
+      const userProfile = generateRandomUser(userDetails.genderMatch ==="random"?"male": (userDetails.genderMatch?? "male") );
       socket.emit("chat:send-user-profile", {
         roomId,
         userProfile,
       });
-    
-      // Auto-select first chat
+
+
+
+      // 🧭 Auto-select first chat
       setActiveRoomId((prev) => prev ?? roomId);
     });
-    
 
 
     // 📩 RECEIVE MESSAGE FROM USER
     socket.on("chat:message", (msg) => {
-      console.log("MESSAGE RECIEVED",msg)
-      if(msg.sender == "mod") return
+      console.log("MESSAGE RECIEVED", msg)
+      if (msg.sender == "mod") return
       setChats((prev) =>
         prev.map((chat) =>
           chat.roomId === msg.roomId
@@ -106,7 +199,7 @@ export function useModChatSocket(modName: string) {
 
 
     socket.on("chat:gift", (msg) => {
-      console.log("GIFT RECIEVED",msg)
+      console.log("GIFT RECIEVED", msg)
       setChats((prev) =>
         prev.map((chat) =>
           chat.roomId === msg.roomId
@@ -128,7 +221,13 @@ export function useModChatSocket(modName: string) {
             : chat
         )
       );
+      fetch('/api/gift/credit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ msg })
+      })
     });
+    
 
     // ✍️ TYPING INDICATORS
     socket.on("typing", () => setIsTyping(true));
@@ -137,12 +236,12 @@ export function useModChatSocket(modName: string) {
     // CHAT ENDED
     socket.on("chat:ended", ({ roomId }) => {
       setChats((prev) => prev.filter((c) => c.roomId !== roomId));
-    
+
       setActiveRoomId((current) =>
         current === roomId ? null : current
       );
     });
-    
+
 
     return () => {
       socket.off("mod:new-chat");
@@ -152,7 +251,7 @@ export function useModChatSocket(modName: string) {
       socket.off("stop:typing");
       socket.off("chat:ended");
     };
-    
+
   }, [modName]);
 
   // 📤 SEND MESSAGE TO USER
@@ -190,14 +289,14 @@ export function useModChatSocket(modName: string) {
       content: text,
     });
 
-    console.log("MESSAGE SENT BY MOD", {activeRoomId, text})
+    console.log("MESSAGE SENT BY MOD", { activeRoomId, text })
 
     socketRef.current.emit("stop:typing");
   };
 
   // ✍️ HANDLE TYPING
   const handleTyping = () => {
-    socketRef.current.emit("typing", { roomId: activeRoomId});
+    socketRef.current.emit("typing", { roomId: activeRoomId });
 
     if (typingTimeout.current) {
       clearTimeout(typingTimeout.current);
@@ -225,21 +324,21 @@ export function useModChatSocket(modName: string) {
       prev.map((chat) =>
         chat.roomId === activeRoomId
           ? {
-              ...chat,
-              messages: [
-                ...chat.messages,
-                {
-                  id: Date.now(),
-                  sender: "mod",
-                  type: "image",
-                  imageUrl,
-                },
-              ],
-            }
+            ...chat,
+            messages: [
+              ...chat.messages,
+              {
+                id: Date.now(),
+                sender: "mod",
+                type: "image",
+                imageUrl,
+              },
+            ],
+          }
           : chat
       )
     );
-    
+
 
     // await decreaseChat();
   };
@@ -247,15 +346,15 @@ export function useModChatSocket(modName: string) {
   // ⏭ EXIT / NEXT CHAT
   const exitChat = () => {
     if (!activeRoomId) return;
-  
+
     // 🔔 Tell backend to end THIS room only
     socketRef.current.emit("chat:next", activeRoomId);
-  
+
     // 🧹 Remove this chat locally
     setChats((prev) =>
       prev.filter((chat) => chat.roomId !== activeRoomId)
     );
-  
+
     // 🧭 Switch to another open chat if any
     setActiveRoomId((prev) => {
       const remaining = chats.filter(
@@ -263,24 +362,36 @@ export function useModChatSocket(modName: string) {
       );
       return remaining.length ? remaining[0].roomId : null;
     });
-  
+
     // ✍️ Stop typing ONLY for this room
     socketRef.current.emit("stop:typing", {
       roomId: activeRoomId,
     });
   };
+
+  const sendFriendRequest = (roomId: string) => {
+    const socket = socketRef.current;
+  
+    socket.emit("friend:request", {
+      roomId,
+    });
+  };
   
 
+  
+
+
   return {
-    chats,                // for side panel
+    chats,
     activeRoomId,
-    setActiveRoomId,      // clicking side panel
+    setActiveRoomId,
     activeMessages: chats.find(c => c.roomId === activeRoomId)?.messages ?? [],
     isTyping,
     sendMessage,
     handleTyping,
     exitChat,
     sendImageMessage,
+    sendFriendRequest
   };
-  
+
 }

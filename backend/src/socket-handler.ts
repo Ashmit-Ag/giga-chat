@@ -86,8 +86,8 @@ export const handleUserNext = (io: SocketIOServer, socket: Socket) => {
     socket.emit("chat:connected", { roomId });
     modSocket.emit("mod:new-chat", {
       roomId,
-      userId: socket.id,
-      userPlan: socket.data.username
+      userId: socket.data.userId,
+      userGenderSelected: socket.data.gender
     });
     
     console.log(`[SUCCESS] Room Created: ${roomId}`);

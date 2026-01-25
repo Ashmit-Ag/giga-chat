@@ -11,7 +11,7 @@ import {
 } from "lucide-react"
 import { useEffect, useState } from "react"
 
-type Gender = "male" | "female" | "both"
+type Gender = "male" | "female" | "random"
 
 interface GenderOption {
   key: Gender
@@ -26,24 +26,47 @@ const GenderSelector = () => {
   useEffect(()=>{
 
     if (state?.planName == "Free"){
-      setSelectedGender('both')
+      setSelectedGender('random')
     }
+
+    setSelectedGender(state?.gender_filter || "random")
   },[loading])
 
-  const [selectedGender, setSelectedGender] = useState<Gender>(
-    state?.planName === "Free" ? "both" : "male"
-  )
+  const [selectedGender, setSelectedGender] = useState<Gender>('random')
 
   const options: GenderOption[] = [
     { key: "male", label: "Male", emoji: Mars },
-    { key: "both", label: "Random", emoji: UsersIcon },
+    { key: "random", label: "Random", emoji: UsersIcon },
     { key: "female", label: "Female", emoji: Venus },
   ]
 
-  const handleSelect = (gender: Gender) => {
-    if (isFree && gender !== "both") return
-    setSelectedGender(gender)
-  }
+  const handleSelect = async (gender: Gender) => {
+    if (isFree && gender !== "random") return;
+  
+    // Optimistic UI update
+    setSelectedGender(gender);
+  
+    try {
+      const res = await fetch("/api/user", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          genderMatch: gender,
+        }),
+      });
+  
+      if (!res.ok) {
+        throw new Error("Failed to update gender preference");
+      }
+    } catch (error) {
+      console.error(error);
+      // rollback if needed
+      setSelectedGender(prev => prev);
+    }
+  };
+  
 
   return (
     <div className="flex flex-col gap-3 items-center justify-center">
@@ -61,7 +84,7 @@ const GenderSelector = () => {
       <div className="flex gap-3 items-center justify-center">
         {options.map(option => {
           const isSelected = selectedGender === option.key
-          const isLocked = isFree && option.key !== "both"
+          const isLocked = isFree && option.key !== "random"
           const IconComponent = option.emoji
 
           return (

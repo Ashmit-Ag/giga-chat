@@ -8,19 +8,22 @@ import { Badge, Button } from '@mantine/core';
 import EditProfileModal from './EditProfileModal';
 import { RandomUserProfile } from '@/hooks/useModChatSocket';
 import PlanBadge from '../ui/planBadge';
+import InterestsModal from './InterestsModal';
 
 interface ChatHeaderProps {
   connected: boolean;
   searchingText: string | undefined
   partnerProfile?: RandomUserProfile | null;
+  sendFriendRequest: ()=> void
 }
 
-export default function ChatHeader({ connected, partnerProfile, searchingText }: ChatHeaderProps) {
+export default function ChatHeader({ connected, partnerProfile, searchingText, sendFriendRequest }: ChatHeaderProps) {
   const { state, clearPlan } = usePlan();
   const { data } = useSession();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [editInterestsOpen, setEditInterestsOpen] = useState(false);
 
   /* -------------------- Interests Logic -------------------- */
   const userInterests: string[] = data?.user.interests ?? [];
@@ -74,14 +77,6 @@ export default function ChatHeader({ connected, partnerProfile, searchingText }:
     ? randomCommonInterests
     : latestThreeInterests;
 
-  /* -------------------- Plan Badge -------------------- */
-  const planColor =
-    state?.planName === 'Premium'
-      ? 'yellow'
-      : state?.planName === 'Basic'
-        ? 'violet'
-        : 'gray';
-
 
   /* -------------------- Render -------------------- */
   return (
@@ -91,6 +86,12 @@ export default function ChatHeader({ connected, partnerProfile, searchingText }:
         <EditProfileModal
           opened={editProfileOpen}
           onClose={() => setEditProfileOpen(false)}
+        />
+      )}
+      {editInterestsOpen && (
+        <InterestsModal
+          opened={editInterestsOpen}
+          onClose={() => setEditInterestsOpen(false)}
         />
       )}
 
@@ -140,11 +141,7 @@ export default function ChatHeader({ connected, partnerProfile, searchingText }:
                 <h2 className="text-white text-sm font-medium">
                   {data?.user?.firstName} {data?.user?.lastName}
                 </h2>
-
-                {/* <Badge size="xs" color={planColor} radius="sm">
-                  {state?.planName}
-                </Badge> */}
-                <PlanBadge planName={"Premium"} />
+                <PlanBadge planName={state?.planName} />
               </div>
 
               {/* Username / Status */}
@@ -190,7 +187,7 @@ export default function ChatHeader({ connected, partnerProfile, searchingText }:
                     },
                   },
                 }}
-                onClick={() => setEditProfileOpen(true)}
+                onClick={() => setEditInterestsOpen(true)}
               >
                 <span>Add Interests</span> <Pencil size={10} className="ml-2" />
               </Button>
@@ -218,41 +215,13 @@ export default function ChatHeader({ connected, partnerProfile, searchingText }:
                   px={2}
                   h={18}
                   className="min-w-0"
-                  onClick={() => setEditProfileOpen(true)}
+                  onClick={() => setEditInterestsOpen(true)}
                 >
                   <Pencil size={10} />
                 </Button>
               )}
             </div>
           )}
-
-          {/* {randomCommonInterests && randomCommonInterests.length > 0 && (
-            <div className="mt-1 flex items-center gap-1 flex-wrap">
-              {randomCommonInterests.map((interest, index) => (
-                <Badge
-                  key={index}
-                  size="xs"
-                  color="indigo"
-                  variant="light"
-                  className="px-1.5 py-[2px] text-[9px]"
-                >
-                  {interest}
-                </Badge>
-              ))}
-
-              <Button
-                size="xs"
-                variant="subtle"
-                color="indigo"
-                px={2}
-                h={18}
-                className="min-w-0"
-                onClick={() => setEditProfileOpen(true)}
-              >
-                {!connected && <Pencil size={10} />}
-              </Button>
-            </div>
-          )} */}
         </div>
       </div>
 
@@ -261,6 +230,7 @@ export default function ChatHeader({ connected, partnerProfile, searchingText }:
         {connected ? (
           <button
             disabled={state?.max_friend_req == 0}
+            // onClick={sendFriendRequest}
             className="px-3 text-xs rounded-md font-medium hover:bg-white/10 text-white disabled:text-white/50"
           >
             <UserPlus2Icon size={24} />

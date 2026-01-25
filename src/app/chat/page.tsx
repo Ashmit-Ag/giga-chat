@@ -12,6 +12,7 @@ import { notifications } from "@mantine/notifications";
 import { removeEmojis } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import { RandomUserProfile } from "@/hooks/useModChatSocket";
+import { Mystery_Quest } from "next/font/google";
 
 type Message = {
   id: number;
@@ -26,8 +27,9 @@ type Message = {
 
 export default function UserChatPage() {
   const { data: session, status } = useSession();
+  const { state, decreaseChat } = usePlan()
 
-  const socketRef = useRef(getSocket());
+  const socketRef = useRef(getSocket(session?.user.id, state?.gender_filter));
   const typingTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -43,11 +45,10 @@ export default function UserChatPage() {
   const [searchingText, setSearchingText] = useState<string | null>(null);
   const [seconds, setSeconds] = useState(1);
   const [chatStatus, setChatStatus] = useState<"idle" | "active" | "partner_skipped" | "me_skipped">('idle')
-  const { state, decreaseChat } = usePlan()
+  
 
   const [userEnded, setUserEnded] = useState(false)
 
-  const username = session?.user.email;
   const noChatsLeft =
     connected &&
     state?.chats_left !== undefined &&
@@ -55,22 +56,52 @@ export default function UserChatPage() {
 
 
   useEffect(() => {
-    // fetch("/api/socket");
+
     const socket = socketRef.current;
-    // console.log("USER SOCKET", socket)
-    socket.emit("user:identify", { username });
 
     socket.on("match:searching", (delay: number) => setSearchingText(`Searching...`));
-    socket.on("chat:connected", ({ roomId, userProfile }) => {
+    socket.on("chat:connected", ({ roomId, username }) => {
       setRoomId(roomId);
       roomIdRef.current = roomId
       setMessages([]);
       setConnected(true);
-      // setPartnerName("Random MOD NAME");
       setSearchingText(null);
-      // console.log("USER CONNECTED", roomId)
       decreaseChat();
+
+      socket.emit("user:identify", {
+        roomId,
+        username,
+      });
     });
+
+    socket.on("friend:request-received", ({ roomId }) => {
+
+        const accepted = window.confirm("You received a friend request. Accept?");
+        
+        if (!accepted) return;
+        
+        socket.emit("friend:request:accepted", {roomId:roomIdRef.current});
+        
+        // ✅ ADD FRIEND (MOD / USER)
+        // await fetch("/api/friends/add", {
+          //   method: "POST",
+          //   headers: { "Content-Type": "application/json" },
+          //   body: JSON.stringify({ friendId: fromUserId }),
+          // });
+    });
+
+    socket.on("friend:request:accepted", ({ friendId }) => {
+      alert("Friend request accepted 🎉");
+    
+      // ✅ ADD FRIEND (OTHER SIDE)
+      // await fetch("/api/friends/add", {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({ friendId }),
+      // });
+    });
+    
+    
 
 
     socket.on("chat:user-profile", ({ roomId, userProfile }) => {
@@ -232,6 +263,11 @@ export default function UserChatPage() {
 
   };
 
+  const sendFriendRequest = () => {
+    console.log("FREIND REQ SEND USER", myroomId)
+    socketRef.current.emit("friend:request", {roomId:roomIdRef.current});
+  };
+
   const nextChat = () => {
     // 1. Clear UI state immediately so the user knows the transition started
     setChatStatus("me_skipped")
@@ -284,6 +320,7 @@ export default function UserChatPage() {
           connected={connected}
           partnerProfile={ partnerProfile}
           searchingText={searchingText || undefined}
+          sendFriendRequest={sendFriendRequest}
         />
 
         <MessageList

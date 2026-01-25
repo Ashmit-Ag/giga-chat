@@ -47,6 +47,10 @@ model User {
   billingDate     DateTime?
   planId          String?
   plan            Plan?     @relation(fields: [planId], references: [id])
+
+  autopayEnabled  Boolean   @default(true)
+  payuSubId       String?   // subscription id from PayU for autopay
+  pendingPlanId   String?   // for downgrade
 }
 
 
@@ -126,12 +130,12 @@ model Image {
 }
 
 model Payment {
-  id        String  @id @default(uuid())
-  txnid     String  @unique
+  id        String   @id @default(uuid())
+  txnid     String   @unique
   userId    String
   amount    Float
-  type      String  // "PLAN" | "GIFT"
-  refId     String  // planId or giftId
-  status    String  // SUCCESS | FAILED
+  type      String   // PLAN | RENEWAL | GIFT
+  refId     String
+  status    String   // PENDING | SUCCESS | FAILED
   createdAt DateTime @default(now())
 }

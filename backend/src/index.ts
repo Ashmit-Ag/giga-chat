@@ -23,7 +23,6 @@ const io = new SocketIOServer(httpServer, {
   path: "/api/socket/io",
   addTrailingSlash: false,
   cors: {
-    // Matches the Next.js handler logic
     origin: process.env.FRONTEND_URL || "*", 
     methods: ["GET", "POST"],
   },
@@ -33,7 +32,7 @@ const io = new SocketIOServer(httpServer, {
 console.log("🚀 Initializing Socket.IO Server...");
 
 io.on("connection", (socket: Socket) => {
-  const { role } = socket.handshake.auth;
+  const { role, userId, gender } = socket.handshake.auth;
 
   // 1. Validation Logic (Matched Exactly)
   if (!role || (role !== "user" && role !== "mod")) {
@@ -42,26 +41,84 @@ io.on("connection", (socket: Socket) => {
     return;
   }
 
-  console.log(`[CONNECTED] ID: ${socket.id} | Role: ${role}`);
+  // console.log(`[CONNECTED] ID: ${socket.id} | Role: ${role}`);
 
   // 2. State Initialization (Matched Exactly)
   socket.data.role = role;
   socket.data.username = null;
   socket.data.rooms = new Set<string>();
+  
+  
+  if(role === "user"){
+    socket.data.userId = userId
+    socket.data.gender = gender
+    console.log(`[CONNECTED] ID: ${socket.id} | Role: ${role} | UserId: ${userId}`);
 
+  }
   if (role === "mod") {
     modLoads.set(socket.id, 0);
     console.log(`[MOD_INIT] Mod ${socket.id} added to load balancer.`);
   }
 
   // 3. Structured Event Handlers (Matched Exactly)
-  socket.on("user:identify", ({ username }) => {
-    if (!username || typeof username !== "string") {
-      return console.warn(`[IDENTIFY_ERROR] Invalid username from ${socket.id}`);
+  socket.on("user:identify", ({ roomId, username }) => {
+    if (
+      !roomId ||
+      !username ||
+      typeof username !== "string"
+    ) {
+      return console.warn(
+        `[IDENTIFY_ERROR] Invalid identify payload from ${socket.id}`
+      );
     }
+  
+    // store identity
     socket.data.username = username;
-    console.log(`[IDENTIFY] ${socket.id} is now known as ${username}`);
+    socket.data.rooms.add(roomId);
+  
+    console.log(
+      `[IDENTIFY] User ${username} identified in room ${roomId}`
+    );
+  
+    // 📡 Forward identity to MOD in the same room
+    socket.to(roomId).emit("user:identify", {
+      roomId,
+      username,
+    });
   });
+  
+  // ❤️ FRIEND REQUEST (ROOM-BASED)
+
+socket.on("friend:request", ({ roomId }) => {
+  if (!roomId) {
+    return console.warn(
+      `[FRIEND_REQ_ERROR] Missing roomId from ${socket.id}`
+    );
+  }
+
+  console.log(
+    `[FRIEND_REQUEST] ${socket.data.role} ${socket.id} → room ${roomId}`
+  );
+
+  // Send to everyone else in the room
+  socket.to(roomId).emit("friend:request-received", roomId);
+});
+
+socket.on("friend:request:accepted", ({ roomId }) => {
+  if (!roomId) {
+    return console.warn(
+      `[FRIEND_ACCEPT_ERROR] Missing roomId from ${socket.id}`
+    );
+  }
+
+  console.log(
+    `[FRIEND_ACCEPTED] ${socket.data.role} ${socket.id} in room ${roomId}`
+  );
+
+  // Notify both sides (including sender)
+  io.to(roomId).emit("friend:request:accepted");
+});
+
 
   socket.on("chat:send-user-profile", ({ roomId, userProfile }) => {
     if (socket.data.role !== "mod") return;
@@ -70,7 +127,7 @@ io.on("connection", (socket: Socket) => {
     }
 
     io.to(roomId).emit("chat:user-profile", { roomId, userProfile });
-    console.log(`[PROFILE_SYNC] Shared profile to room ${roomId}`);
+    // console.log(`[PROFILE_SYNC] Shared profile to room ${roomId}`);
   });
 
   socket.on("user:next", async () => {

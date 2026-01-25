@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LucideGift, X } from 'lucide-react';
 import { Button } from "@/components/ui/button"; // Adjust path to your UI library
 import { Slider } from "@/components/ui/slider"; // Adjust path to your UI library
@@ -6,10 +6,89 @@ import { Slider } from "@/components/ui/slider"; // Adjust path to your UI libra
 const GiftPopup = ({ onClose, sendGift }: { onClose: () => void, sendGift: (amount: number) => void }) => {
   const [amount, setAmount] = useState<number>(100);
 
-  const handleSend = () => {
-    sendGift(amount);
-    onClose();
-  };
+  const handleSend = async () => {
+    const windowName = `payu_payment_${Date.now()}`
+    const paymentWindow = window.open(
+      'about:blank',
+      windowName,
+      'width=500,height=700'
+    )
+  
+    if (!paymentWindow) {
+      alert('Please allow pop-ups')
+      return
+    }
+
+    paymentWindow.document.write(`
+    <html>
+      <head><title>Redirecting to PayU...</title></head>
+      <body style="display:flex;align-items:center;justify-content:center;font-family:sans-serif">
+        <h3>Redirecting to payment gateway…</h3>
+      </body>
+    </html>
+  `)
+  
+    try {
+      const res = await fetch('/api/gift/init', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount }),
+      })
+  
+      if (!res.ok) throw new Error('Payment init failed')
+  
+      const { action, payload } = await res.json()
+  
+      // persist context
+      localStorage.setItem('LAST_TEST_TXNID', payload.txnid)
+      localStorage.setItem('LAST_GIFT_AMOUNT', String(amount))
+  
+      const form = document.createElement('form')
+      form.method = 'POST'
+      form.action = action
+      form.target = windowName
+  
+      Object.entries(payload).forEach(([key, value]) => {
+        const input = document.createElement('input')
+        input.type = 'hidden'
+        input.name = key
+        input.value = String(value)
+        form.appendChild(input)
+      })
+  
+      document.body.appendChild(form)
+      form.submit()
+      document.body.removeChild(form)
+  
+  
+    } catch (err) {
+      console.error(err)
+      paymentWindow.close()
+    }
+  }
+
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return
+  
+      if (event.data?.type === 'PAYU_PAYMENT_COMPLETED') {
+        if (event.data.status === 'SUCCESS') {
+          const amt = Number(localStorage.getItem('LAST_GIFT_AMOUNT'))
+  
+          sendGift(amt)
+          onClose() // ✅ CLOSE GIFT POPUP
+        }
+  
+        localStorage.removeItem('LAST_TEST_TXNID')
+        localStorage.removeItem('LAST_GIFT_AMOUNT')
+      }
+    }
+  
+    window.addEventListener('message', handler)
+    return () => window.removeEventListener('message', handler)
+  }, [sendGift, onClose])
+  
+  
 
   return (
     <div className="fixed inset-0 bg-black/50  mx-auto flex items-center justify-center z-50">
