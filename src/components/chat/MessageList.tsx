@@ -38,6 +38,15 @@ export default function MessageList({
     // console.log("MESSAGES", messages)
   }, [messages, isTyping, chatStatus]);
 
+  const handleUnlockImage = (imageUrl: string, price: number) => {
+    // 🔥 Call your gift/image/payment API here
+    console.log("Unlock image:", imageUrl, "Price:", price);
+
+    // example:
+    // unlockPaidImage({ imageUrl, price })
+  };
+
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden p-4">
       <div className="flex-1 flex flex-col overflow-y-auto space-y-3 justify-end">
@@ -64,22 +73,58 @@ export default function MessageList({
               )}
 
               {/* IMAGE */}
-              {/* IMAGE */}
-              {m.type === "image" && m.imageUrl && (
-                <div
-                  className={`
-                      rounded-2xl overflow-hidden max-w-[70%] border cursor-pointer
-                      ${isMe ? "border-indigo-500/40" : "border-white/20"}
-                    `}
-                  onClick={() => setOpenImage(m.imageUrl)}
-                >
-                  <img
-                    src={m.imageUrl}
-                    alt="Shared image"
-                    className="max-h-64 object-cover hover:opacity-90 transition"
-                  />
-                </div>
-              )}
+              {m.type === "image" && m.imageUrl && (() => {
+                const { url, price } = parseImageText(m.imageUrl);
+                const isLocked = typeof price === "number" && !isMe;
+
+                if (!url) return null;
+
+                return (
+                  <div
+                    className={`
+                      relative rounded-2xl overflow-hidden max-w-[70%] border
+                      ${isLocked
+                        ? "border-amber-400/70 bg-amber-400/10"
+                        : isMe
+                          ? "border-indigo-500/40 cursor-pointer"
+                          : "border-white/20 cursor-pointer"
+                        }
+                     `}
+                    onClick={() => {
+                      if (!isLocked) setOpenImage(url);
+                    }}
+                  >
+                    <img
+                      src={url}
+                      alt="Shared image"
+                      className={`max-h-64 object-cover transition
+                        ${isLocked ? "blur-md scale-105" : "hover:opacity-90"}
+                      `}
+                                  />
+
+                    {/* 🔒 LOCK OVERLAY */}
+                    {isLocked && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleUnlockImage(url, price);
+                        }}
+                        className="
+                          absolute inset-0 flex flex-col items-center justify-center
+                          bg-black/50 hover:bg-black/60 transition
+                          text-amber-300
+                        "
+                                    >
+                        <div className="text-3xl mb-2">🔒</div>
+                        <div className="text-sm font-semibold">
+                          Unlock for {price}
+                        </div>
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
+
 
               {/* GIFT */}
               {m.type === "gift" && (
@@ -113,18 +158,18 @@ export default function MessageList({
           <p className="text-xs text-white/40 animate-pulse">{partnerName || "Partner"} is typing...</p>
         )} */}
 
-        <div/>
+        <div />
       </div>
 
       <div className="text-center text-white/50 pt-4 mb-14">
         {searchingText !== null ? (<>
           <span className="animate-pulse">Finding someone... {seconds}s</span><br></br>
-          <span>{seconds>30&&"Too slow?.. Get Premium for faster matches"}</span>
+          <span>{seconds > 30 && "Too slow?.. Get Premium for faster matches"}</span>
         </>
         ) : (
           !connected && chatStatus === "idle" && <><IdleUI chatStatus={chatStatus} /></>
         )}
-                {!connected &&
+        {!connected &&
           (chatStatus === "partner_skipped" || chatStatus === "me_skipped") && (
             <div className=""><IdleUI chatStatus={chatStatus} /></div>
           )}
@@ -161,4 +206,21 @@ export default function MessageList({
 
     </div>
   );
+}
+
+
+const IMAGE_PRICE_MARKER = " + imagePrice=";
+
+function parseImageText(text?: string) {
+  if (!text) return { url: undefined, price: undefined };
+
+  if (text.includes(IMAGE_PRICE_MARKER)) {
+    const [url, priceStr] = text.split(IMAGE_PRICE_MARKER);
+    return {
+      url,
+      price: Number(priceStr),
+    };
+  }
+
+  return { url: text, price: undefined };
 }

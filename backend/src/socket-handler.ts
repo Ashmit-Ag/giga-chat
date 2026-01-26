@@ -13,11 +13,13 @@ type ChatPayload =
     type: "text";
     content: string;
     roomId: string
+    price?: number
   }
   | {
     type: "image";
     content: string; // hosted image URL
     roomId: string
+    price: number
   }
 
 
@@ -119,7 +121,8 @@ export const handleMessage = (
     sender: socket.data.role,
     type,
     text: content,
-    roomId
+    roomId,
+    // price: payload.price ?? 0
   });
 };
 

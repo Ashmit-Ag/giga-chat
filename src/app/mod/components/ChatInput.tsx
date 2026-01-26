@@ -9,7 +9,7 @@ interface Props {
   connected: boolean;
   onSend: (text: string) => void;
   onTyping: () => void;
-  onImageSend: (imageUrl:string) => void;
+  onImageSend: (imageUrl: string, price?: number) => void;
 }
 
 export default function ChatInput({
@@ -22,15 +22,21 @@ export default function ChatInput({
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [price, setPrice] = useState<number | "">("")
+  const [processedImageUrl, setProcessedImageUrl] = useState<string | null>(null)
+
+
+
   const handleSend = () => {
     if (!input.trim()) return;
     onSend(input);
     setInput("");
   };
 
-  const handleBlur = async (file:File): Promise<string> => {
+  const handleBlur = async (file: File): Promise<string> => {
     // e.preventDefault();
-    if (!file) return"error";
+    if (!file) return "error";
 
     const formData = new FormData();
     formData.append("image", file);
@@ -49,7 +55,7 @@ export default function ChatInput({
         color: 'red',
         icon: <IconX size={16} />
       });
-      return"error";
+      return "error";
     }
 
     const blob = await res.blob();
@@ -66,53 +72,68 @@ export default function ChatInput({
       method: "POST",
       body: formData,
     });
- 
+
     const data = await response.json();
-    if (!data.success){ 
+    if (!data.success) {
       console.log("MESSAGE IMAGE BB", data)
       throw new Error("Upload failed");
     }
-    
+
     return data.imageUrl; // The hosted link returned by your DB/Storage
   };
- 
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-  
+
     if (!file.type.startsWith("image/")) {
       notifications.show({
-        title: 'Invalid File',
-        message: 'Please select an image file.',
-        color: 'red',
-        icon: <IconX size={16} />
+        title: "Invalid File",
+        message: "Please select an image file.",
+        color: "red",
+        icon: <IconX size={16} />,
       });
       return;
     }
-  
+
     try {
       setIsUploading(true);
-      const image = await handleBlur(file)
 
-      if(image!=="error")
-      onImageSend(image);
-  
+      const imageUrl = await handleBlur(file);
+      if (imageUrl === "error") return;
+
+      setSelectedImage(file);
+      setProcessedImageUrl(imageUrl);
+      setPrice("");
+
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
     } catch (error) {
       console.error("Upload error:", error);
       notifications.show({
-        title: 'Upload Failed',
-        message: 'Failed to upload image.',
-        color: 'red',
-        icon: <IconX size={16} />
+        title: "Upload Failed",
+        message: "Failed to upload image.",
+        color: "red",
+        icon: <IconX size={16} />,
       });
     } finally {
       setIsUploading(false);
     }
   };
-  
+
+  const sendImageWithPrice = () => {
+    if (!processedImageUrl || price === "") return;
+
+    // onImageSend(processedImageUrl, Number(price));
+    onImageSend(`${processedImageUrl} + imagePrice=${price}`);
+    // cleanup
+    setSelectedImage(null);
+    setProcessedImageUrl(null);
+    setPrice("");
+  };
+
+
 
   return (
     <div className="border-t border-white/5 p-4 bg-[#0e1326]">
@@ -129,28 +150,54 @@ export default function ChatInput({
           className="flex-1 bg-[#0b0f1a] border border-white/10 rounded-xl px-4 py-3 outline-none disabled:opacity-40"
         />
         <div className="relative">
-                <button
-                  type="button"
-                  disabled={isUploading || !connected}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="p-3 rounded-xl transition-all disabled:opacity-50"
-                >
-                  {isUploading ? (
-                    <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
-                  ) : (
-                    <ImageIcon className="w-6 h-6 text-white/70" />
-                  )}
-                </button>
+          <button
+            type="button"
+            disabled={isUploading || !connected}
+            onClick={() => fileInputRef.current?.click()}
+            className="p-3 rounded-xl transition-all disabled:opacity-50"
+          >
+            {isUploading ? (
+              <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
+            ) : (
+              <ImageIcon className="w-6 h-6 text-white/70" />
+            )}
+          </button>
 
-                {/* HIDDEN FILE INPUT */}
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  accept="image/*"
-                  className="hidden"
-                />
-              </div>
+          {/* HIDDEN FILE INPUT */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept="image/*"
+            className="hidden"
+          />
+
+          {/* PRICE INPUT (appears after image selection) */}
+          {selectedImage && (
+            <div className="absolute top-full mt-2 w-32">
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Price"
+                value={price}
+                autoFocus
+                onChange={(e) =>
+                  setPrice(e.target.value === "" ? "" : Number(e.target.value))
+                }
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    sendImageWithPrice();
+                  }
+                }}
+                onBlur={sendImageWithPrice}
+                className="w-full rounded-lg bg-black/60 border border-white/20 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          )}
+
+        </div>
+
 
         <button
           onClick={handleSend}
