@@ -60,7 +60,7 @@ export default function LoginPage() {
             value={phone}
             onChange={(e) => {
               const value = e.target.value;
-              if (/^\d*$/.test(value)) {
+              if (/^\d*$/.test(value) && value.length <= 10) {
                 setPhone(value);
               }
             }}
