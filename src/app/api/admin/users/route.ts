@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import bcrypt from "bcrypt";
 
 export async function GET(req: Request) {
   try {
@@ -21,20 +22,26 @@ export async function GET(req: Request) {
     const page = Number(searchParams.get("page") || 1);
     const limit = 50;
 
-    const users = await prisma.randomUser.findMany({
+    const users = await prisma.user.findMany({
       skip: (page - 1) * limit,
       take: limit,
       select: {
         id: true,
-        fullName: true,
-        userName: true,
+        firstName: true,
+        lastName: true,
+        username: true,
         pfpUrl: true,
         age: true,
         gender: true,
         city: true,
+        totalGiftAmount: true,
+        totalImageAmount: true,
+        createdAt: true,
+        phone: true,
+        plan:{select: {name:true}}
       },
       orderBy: {
-        fullName: "asc",
+        firstName: "asc",
       },
     });
 
@@ -50,113 +57,49 @@ export async function GET(req: Request) {
 }
 
 
-export async function POST(req: Request) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    if (!session || session.user?.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
-
-    const body = await req.json();
-    const { fullName, userName, age, city, gender, pfpUrl } = body;
-
-    if (!fullName || !userName || !pfpUrl) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
-
-    const user = await prisma.randomUser.create({
-      data: {
-        fullName,
-        userName,
-        age: Number(age),
-        city,
-        gender,
-        pfpUrl,
-      },
-    });
-
-    return NextResponse.json(user, { status: 201 });
-  } catch (error) {
-    console.error("❌ ADD USER ERROR:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
-  }
-}
-
-
 export async function PATCH(req: Request) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    if (!session || session.user?.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
-
-    const body = await req.json();
-    const { id, ...updates } = body;
-
-    if (!id) {
+    try {
+      // 🔐 Session check
+      const session = await getServerSession(authOptions);
+  
+      if (!session || session.user?.role !== "ADMIN") {
+        return NextResponse.json(
+          { error: "Unauthorized" },
+          { status: 403 }
+        );
+      }
+  
+      const body = await req.json();
+      const { userId, password } = body;
+  
+      if (!userId || !password) {
+        return NextResponse.json(
+          { error: "Missing userId or password" },
+          { status: 400 }
+        );
+      }
+  
+      // 🔒 Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+  
+      // 🔄 Update user
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          password: hashedPassword,
+        },
+      });
+  
       return NextResponse.json(
-        { error: "User ID required" },
-        { status: 400 }
+        { success: true },
+        { status: 200 }
+      );
+    } catch (error) {
+      console.error("❌ RESET PASSWORD ERROR:", error);
+  
+      return NextResponse.json(
+        { error: "Internal Server Error" },
+        { status: 500 }
       );
     }
-
-    const user = await prisma.randomUser.update({
-      where: { id },
-      data: {
-        ...updates,
-        age: updates.age ? Number(updates.age) : undefined,
-      },
-    });
-
-    return NextResponse.json(user, { status: 200 });
-  } catch (error) {
-    console.error("❌ UPDATE USER ERROR:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
   }
-}
-
-
-export async function DELETE(req: Request) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    if (!session || session.user?.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
-
-    const body = await req.json();
-    const { ids } = body;
-
-    if (!Array.isArray(ids) || !ids.length) {
-      return NextResponse.json(
-        { error: "Invalid IDs" },
-        { status: 400 }
-      );
-    }
-
-    await prisma.randomUser.deleteMany({
-      where: {
-        id: { in: ids },
-      },
-    });
-
-    return NextResponse.json({ success: true }, { status: 200 });
-  } catch (error) {
-    console.error("❌ DELETE USER ERROR:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
-  }
-}

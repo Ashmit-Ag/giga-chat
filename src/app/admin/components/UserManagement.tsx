@@ -1,256 +1,306 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Check } from "lucide-react";
+
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+
 
 type User = {
-  id: string;
-  fullName: string;
-  userName: string;
-  age: number;
-  city: string;
-  gender: string;
-  pfpUrl: string;
-  selected?: boolean;
+    id: string;
+    firstName: string;
+    lastName: string;
+    username: string;
+    age: number;
+    city: string;
+    gender: string;
+    pfpUrl: string;
+    selected?: boolean;
+    totalGiftAmount: number;
+    totalImageAmount: number;
+    createdAt: Date,
+    phone: number;
+    plan: { name: string };
 };
 
-// 🔥 dummy upload function
-const uploadImageToDB = async (file: File): Promise<string> => {
-  const formData = new FormData();
-  formData.append("image", file);
-
-  // Replace this with your actual endpoint (e.g., Cloudinary, S3, or local API)
-  const response = await fetch("/api/mod/upload-image", {
-    method: "POST",
-    body: formData,
-  });
-
-  const data = await response.json();
-  if (!data.success) {
-    console.log("MESSAGE IMAGE BB", data)
-    throw new Error("Upload failed");
-  }
-
-  return data.imageUrl; // The hosted link returned by your DB/Storage
-};
 
 export default function UsersManager() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
+    const [users, setUsers] = useState<User[]>([]);
+    const [page, setPage] = useState(1);
+    const [loading, setLoading] = useState(true);
 
-  // create user form state
-  const [form, setForm] = useState({
-    fullName: "",
-    userName: "",
-    age: "",
-    city: "",
-    gender: "",
-    image: null as File | null,
-  });
+    const [search, setSearch] = useState("");
+    const [planFilter, setPlanFilter] = useState<"ALL" | "FREE" | "BASIC" | "PREMIUM">("ALL");
 
-  const selectedUsers = users.filter(u => u.selected);
+    const [sortBy, setSortBy] = useState<"GIFTS" | "IMAGES" | null>("GIFTS");
+    const [sortDir, setSortDir] = useState<"ASC" | "DESC">("DESC");
 
-  const fetchUsers = async (reset = false) => {
-    setLoading(true);
-    const res = await fetch(`/api/admin/users?page=${reset ? 1 : page}`);
-    const data = await res.json();
+    // Reset password dialog
+    const [resetOpen, setResetOpen] = useState(false);
+    const [resetUser, setResetUser] = useState<User | null>(null);
+    const [newPassword, setNewPassword] = useState("");
 
-    setUsers(prev => (reset ? data : [...prev, ...data]));
-    setLoading(false);
-  };
 
-  useEffect(() => {
-    fetchUsers(true);
-  }, []);
+    const fetchUsers = async (reset = false) => {
+        setLoading(true);
+        const res = await fetch(`/api/admin/users?page=${reset ? 1 : page}`);
+        const data = await res.json();
 
-  const deleteSelected = async () => {
-    await fetch("/api/admin/users", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: selectedUsers.map(u => u.id) }),
-    });
+        setUsers(prev => (reset ? data : [...prev, ...data]));
+        setLoading(false);
+    };
 
-    setUsers(users.filter(u => !u.selected));
-  };
+    useEffect(() => {
+        fetchUsers(true);
+    }, []);
 
-  const addUser = async () => {
-    if (!form.image) return alert("Please select an image");
-  
-    try {
-      const pfpUrl = await uploadImageToDB(form.image);
-  
-      const res = await fetch("/api/admin/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fullName: form.fullName,
-          userName: form.userName,
-          age: Number(form.age),
-          city: form.city,
-          gender: form.gender,
-          pfpUrl,
-        }),
-      });
-  
-      const createdUser = await res.json();
-  
-      if (!res.ok) throw new Error(createdUser.error);
-  
-      setUsers(prev => [createdUser, ...prev]);
-  
-      setForm({
-        fullName: "",
-        userName: "",
-        age: "",
-        city: "",
-        gender: "",
-        image: null,
-      });
-    } catch (err) {
-      console.error(err);
-      alert("Failed to create user");
-    }
-  };
-  
+    const visibleUsers = users
+        .filter(u =>
+            u.username.toLowerCase().includes(search.toLowerCase())
+        )
+        .filter(u =>
+            planFilter === "ALL" || u.plan.name.toUpperCase() === planFilter
+        )
+        .sort((a, b) => {
+            if (!sortBy) return 0;
 
-  return (
-    <div className="flex flex-col gap-5 h-full pr-2">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">User Management</h2>
+            const aVal =
+                sortBy === "GIFTS" ? a.totalGiftAmount : a.totalImageAmount;
+            const bVal =
+                sortBy === "GIFTS" ? b.totalGiftAmount : b.totalImageAmount;
 
-        <Button
-          variant="destructive"
-          disabled={!selectedUsers.length}
-          onClick={deleteSelected}
-        >
-          Delete ({selectedUsers.length})
-        </Button>
-      </div>
+            return sortDir === "DESC" ? bVal - aVal : aVal - bVal;
+        });
 
-      {/* Add User */}
-      <div className="grid grid-cols-7 gap-3 bg-[#0b0f1a] p-4 rounded-lg border border-white/10">
-        <input
-          className="input"
-          placeholder="Full Name"
-          value={form.fullName}
-          onChange={e => setForm({ ...form, fullName: e.target.value })}
-        />
-        <input
-          className="input"
-          placeholder="Username"
-          value={form.userName}
-          onChange={e => setForm({ ...form, userName: e.target.value })}
-        />
-        <input
-          className="input"
-          placeholder="Age"
-          type="number"
-          value={form.age}
-          onChange={e => setForm({ ...form, age: e.target.value })}
-        />
-        <input
-          className="input"
-          placeholder="City"
-          value={form.city}
-          onChange={e => setForm({ ...form, city: e.target.value })}
-        />
-        <input
-          className="input"
-          placeholder="Gender"
-          value={form.gender}
-          onChange={e => setForm({ ...form, gender: e.target.value })}
-        />
-        <input
-          type="file"
-          accept="image/*"
-          onChange={e =>
-            setForm({ ...form, image: e.target.files?.[0] ?? null })
-          }
-        />
-        <Button onClick={addUser} className="bg-indigo-600">
-          Add
-        </Button>
-      </div>
 
-      {/* Table */}
-      <div className="flex-1 overflow-y-auto rounded-lg border border-white/10">
-        <table className="w-full text-sm">
-          <thead className="bg-[#0b0f1a] text-white/50">
-            <tr>
-              <th className="p-4 w-10" />
-              <th className="p-4">PFP</th>
-              <th className="p-4 text-left">Full Name</th>
-              <th className="p-4 text-left">Username</th>
-              <th className="p-4 text-center">Age</th>
-              <th className="p-4 text-center">City</th>
-              <th className="p-4 text-center">Gender</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user, idx) => (
-              <tr
-                key={user.id}
-                className={`${idx % 2 === 0 ? "bg-[#0f1424]" : "bg-[#0b0f1a]"}`}
-              >
-                <td className="p-4">
-                  <button
-                    onClick={() =>
-                      setUsers(users.map(u =>
-                        u.id === user.id
-                          ? { ...u, selected: !u.selected }
-                          : u
-                      ))
+    const formatDate = (date: Date | string) => {
+        const d = new Date(date);
+        const day = String(d.getDate()).padStart(2, "0");
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const year = d.getFullYear();
+
+        return `${day}/${month}/${year}`;
+    };
+
+
+
+    return (
+        <div className="flex flex-col gap-5 h-full pr-2">
+            {/* Header */}
+            <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold">User Management</h2>
+
+                <div className="flex gap-2">
+                </div>
+            </div>
+
+            <div className="flex gap-3">
+                <input
+                    placeholder="Search username..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="rounded-lg border border-white/10 bg-black/30 px-4 py-2 text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                />
+
+                <Select
+                    value={planFilter}
+                    onValueChange={(value) =>
+                        setPlanFilter(value as "ALL" | "FREE" | "BASIC" | "PREMIUM")
                     }
-                    className={`w-5 h-5 rounded border flex items-center justify-center ${
-                      user.selected
-                        ? "bg-indigo-600 border-indigo-600"
-                        : "border-white/20"
-                    }`}
-                  >
-                    {user.selected && <Check size={14} className="text-white" />}
-                  </button>
-                </td>
+                >
+                    <SelectTrigger className="w-40 rounded-lg border border-white/10 bg-black/30 text-white focus:ring-1 focus:ring-indigo-500">
+                        <SelectValue placeholder="All Plans" />
+                    </SelectTrigger>
 
-                <td className="p-4">
-                  <img
-                    src={user.pfpUrl}
-                    className="w-9 h-9 rounded-full object-cover"
-                  />
-                </td>
+                    <SelectContent className="bg-[#0b0f1a] border border-white/10 text-white">
+                        <SelectItem value="ALL">All Plans</SelectItem>
+                        <SelectItem value="FREE">Free</SelectItem>
+                        <SelectItem value="BASIC">Basic</SelectItem>
+                        <SelectItem value="PREMIUM">Premium</SelectItem>
+                    </SelectContent>
+                </Select>
 
-                <td className="p-4 font-medium">{user.fullName}</td>
-                <td className="p-4 text-indigo-400">{user.userName}</td>
-                <td className="p-4 text-center">{user.age}</td>
-                <td className="p-4 text-center">{user.city}</td>
-                <td className="p-4 text-center">{user.gender}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </div>
 
-      {/* Pagination */}
-      <div className="flex justify-center">
-        <Button
-          onClick={() => {
-            setPage(p => {
-              const next = p + 1;
-              fetch(`/api/admin/users?page=${next}`)
-                .then(res => res.json())
-                .then(data => setUsers(prev => [...prev, ...data]));
-              return next;
-            });
-            
-          }}
-          disabled={loading}
-          className="bg-indigo-600"
-        >
-          Load More
-        </Button>
-      </div>
-    </div>
-  );
+
+
+            {/* Table */}
+            <div className="flex-1 overflow-y-auto rounded-lg border border-white/10 scrollbar-indigo">
+                <table className="w-full text-sm">
+                    <thead className="bg-[#0b0f1a] text-white/50">
+                        <tr>
+                            {/* <th className="p-4 w-10" /> */}
+                            <th className="p-4 text-left">Sign Up Datet</th>
+                            <th className="p-4 text-left">Full Name</th>
+                            <th className="p-4 text-left">Username</th>
+                            <th className="p-4 text-left">Phone</th>
+                            <th className="p-4 text-center">Age</th>
+                            {/* <th className="p-4 text-center">Gifts Purchased</th> */}
+                            <th
+                                className="p-4 text-center cursor-pointer select-none"
+                                onClick={() => {
+                                    setSortBy("GIFTS");
+                                    setSortDir(d => (sortBy === "GIFTS" && d === "DESC" ? "ASC" : "DESC"));
+                                }}
+                            >
+                                Gifts Purchased {sortBy === "GIFTS" && (sortDir === "DESC" ? "↓" : "↑")}
+                            </th>
+
+                            {/* <th className="p-4 text-center">Imagess Purchased</th> */}
+                            <th
+                                className="p-4 text-center cursor-pointer select-none"
+                                onClick={() => {
+                                    setSortBy("IMAGES");
+                                    setSortDir(d => (sortBy === "IMAGES" && d === "DESC" ? "ASC" : "DESC"));
+                                }}
+                            >
+                                Images Purchased {sortBy === "IMAGES" && (sortDir === "DESC" ? "↓" : "↑")}
+                            </th>
+                            <th className="p-4 text-center">Plan</th>
+                            <th className="p-4 text-center">Actions</th>
+
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {visibleUsers.map((user, idx) => (
+                            <tr
+                                key={user.id}
+                                className={`${idx % 2 === 0 ? "bg-[#0f1424]" : "bg-[#0b0f1a]"}`}
+                            >
+
+                                <td className="p-4 font-medium">{formatDate(user.createdAt)}</td>
+                                <td className="p-4 font-medium">{user.firstName} {user.lastName}</td>
+                                <td className="p-4 text-indigo-400">{user.username}</td>
+                                <td className="p-4 text-indigo-400">{user.phone}</td>
+                                <td className="p-4 text-center">{user.age}</td>
+                                <td className="p-4 text-center">{user.totalGiftAmount}</td>
+                                <td className="p-4 text-center">{user.totalImageAmount}</td>
+                                {/* <td className="p-4 text-center">{user.plan.name}</td> */}
+                                <td className="p-4 text-center">
+                                    <span
+                                        className={`font-medium ${user.plan.name.toUpperCase() === "PREMIUM"
+                                                ? "text-amber-400"
+                                                : user.plan.name.toUpperCase() === "BASIC"
+                                                    ? "text-cyan-500"
+                                                    : "text-gray-400"
+                                            }`}
+                                    >
+                                        {user.plan.name}
+                                    </span>
+                                </td>
+
+                                <td className="p-4 text-center">
+                                    <Button
+                                        size="sm"
+                                        // variant="outline"
+                                        className="text-indigo-600 bg-transparent hover:bg-indigo-800 hover:text-white"
+                                        onClick={() => {
+                                            setResetUser(user);
+                                            setResetOpen(true);
+                                        }}
+                                    >
+                                        Reset Password
+                                    </Button>
+                                </td>
+
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Pagination */}
+            <div className="flex justify-center">
+                <Button
+                    onClick={() => {
+                        setPage(p => {
+                            const next = p + 1;
+                            fetch(`/api/admin/users?page=${next}`)
+                                .then(res => res.json())
+                                .then(data => setUsers(prev => [...prev, ...data]));
+                            return next;
+                        });
+
+                    }}
+                    disabled={loading}
+                    className="bg-indigo-600"
+                >
+                    Load More
+                </Button>
+            </div>
+            {resetUser && (
+                <Dialog open={resetOpen} onOpenChange={setResetOpen}>
+                    <DialogContent className="max-w-md bg-[#0b0f1a] border border-white/10">
+                        <DialogHeader>
+                            <DialogTitle className="text-white">Reset Password</DialogTitle>
+                        </DialogHeader>
+
+                        <p className="text-sm text-gray-400 mb-4">
+                            Reset password for{" "}
+                            <span className="font-semibold text-white">
+                                {resetUser.firstName} {resetUser.lastName}
+                            </span>{" "}
+                            (@{resetUser.username})
+                        </p>
+
+                        <div className="mb-6">
+                            <label className="mb-1 block text-sm text-gray-300">New Password</label>
+                            <input
+                                type="password"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                placeholder="••••••••"
+                                className="w-full rounded-lg border border-white/10 bg-black/30 px-4 py-2 text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                            />
+                        </div>
+
+                        <DialogFooter>
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    setResetOpen(false);
+                                    setNewPassword("");
+                                }}
+                            >
+                                Cancel
+                            </Button>
+
+                            <Button
+                                className="bg-indigo-600"
+                                onClick={async () => {
+                                    await fetch("/api/admin/users", {
+                                        method: "PATCH",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({
+                                            userId: resetUser.id,
+                                            password: newPassword,
+                                        }),
+                                    });
+
+                                    setResetOpen(false);
+                                    setNewPassword("");
+                                }}
+                            >
+                                Reset Password
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            )}
+
+        </div>
+    );
 }

@@ -15,7 +15,7 @@ interface ChatHeaderProps {
   connected: boolean;
   searchingText: string | undefined
   partnerProfile?: RandomUserProfile | null;
-  sendFriendRequest: ()=> void
+  sendFriendRequest: () => void
 }
 
 export default function ChatHeader({ connected, partnerProfile, searchingText, sendFriendRequest }: ChatHeaderProps) {
@@ -36,10 +36,10 @@ export default function ChatHeader({ connected, partnerProfile, searchingText, s
 
   const [randomCommonInterests, setRandomCommonInterests] = useState<string[] | null>(null);
 
-  const sendFriendRequest2 = () =>{
+  const sendFriendRequest2 = () => {
     notifications.show({
-      title:"Coming soon",
-      message:"Friend requests will be available in the next update"
+      title: "Coming soon",
+      message: "Friend requests will be available in the next update"
     })
   }
   useEffect(() => {
@@ -236,12 +236,24 @@ export default function ChatHeader({ connected, partnerProfile, searchingText, s
       <div className="flex items-center gap-3 relative">
         {connected ? (
           <button
-            disabled={state?.max_friend_req == 0}
-            onClick={sendFriendRequest2}
-            className="px-3 text-xs rounded-md font-medium hover:bg-white/10 text-white disabled:text-white/50"
+            onClick={() => {
+              if (state?.max_friend_req === 0) {
+                notifications.show({
+                  title: "Upgrade Required",
+                  message: "Upgrade your plan to send more friend requests.",
+                  color: "yellow",
+                  autoClose: 4000,
+                });
+                return;
+              }
+
+              sendFriendRequest2();
+            }}
+            className="px-3 text-xs rounded-md font-medium hover:bg-white/10 text-white"
           >
             <UserPlus2Icon size={24} />
           </button>
+
         ) : (
           <>
             <button

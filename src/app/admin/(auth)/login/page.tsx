@@ -80,16 +80,6 @@ export default function LoginPage() {
         >
           {loading ? "Logging in..." : "Login"}
         </button>
-
-        {/* <p className="mt-6 text-center text-sm text-gray-400">
-          Don’t have an account?{" "}
-          <span
-            onClick={() => router.push("/signup")}
-            className="cursor-pointer text-indigo-400 hover:text-indigo-300"
-          >
-            Sign up
-          </span>
-        </p> */}
         <p className="mt-4 text-center text-sm text-red-400">
           Restricted Section!
         </p>

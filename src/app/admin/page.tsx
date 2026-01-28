@@ -5,6 +5,7 @@ import AdminLayout from './components/AdminLayout';
 import PlanManager from './components/PlanManager';
 import DashboardOverview from './components/DashboardOverview';
 import ModsManager from './components/ModsManager';
+import RandomUsersManager from './components/RandomUserManagement';
 import UsersManager from './components/UserManagement';
 
 export default function Page() {
@@ -16,6 +17,7 @@ export default function Page() {
         <DashboardOverview onEditPlans={() => setActiveTab('plans')} />
       )}
       {activeTab === 'plans' && <PlanManager />}
+      {activeTab === 'random_users' && <RandomUsersManager/>}
       {activeTab === 'users' && <UsersManager/>}
       {activeTab === 'mods' && <ModsManager/>}
     </AdminLayout>

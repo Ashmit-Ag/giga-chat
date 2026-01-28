@@ -160,7 +160,7 @@ export default function ChatControls({
               onClick={onNext}
               disabled={
                 searchingText !== null
-              }              
+              }
               className="bg-[#202020] text-md font-semibold hover:bg-indigo-500 px-8 py-4"
             >
               Skip
@@ -210,12 +210,12 @@ export default function ChatControls({
             onClick={onChatStart}
             // disabled={searchingText !== null || (state?.chats_left && state?.chats_left <= 0)}
             disabled={
-              searchingText !== null 
+              searchingText !== null
             }
-            
+
             className="bg-indigo-600 absolute -top-17 w-full text-md font-semibold hover:bg-indigo-500 px-4 py-6"
           >
-            {!searchingText ? (state?.chats_left&&state?.chats_left > 0 ?"Find New Friends": "Come Back Tomorrow") : "Searching..."}
+            {!searchingText ? (state?.chats_left && state?.chats_left > 0 ? "Find New Friends" : "Come Back Tomorrow") : "Searching..."}
           </Button>
         )}
         <div className="relative flex-1">
@@ -238,11 +238,12 @@ export default function ChatControls({
               bg-[#0b0f1a]
               border border-white/10 rounded-xl
               pl-4 py-3
-              pr-16
+              pr-20
               outline-none
               disabled:opacity-40
               overflow-y-auto overflow-x-hidden
               leading-relaxed mt-1
+              scrollbar-hide
             "
           />
 
@@ -257,35 +258,50 @@ export default function ChatControls({
               />
             )} */}
             {/* {state?.can_send_gifs && ( */}
-              <div className="relative pb-2">
-                <button
-                  type="button"
-                  disabled={isUploading || !connected || !state?.can_send_gifs}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="p-2 rounded-lg transition disabled:opacity-50"
-                >
-                  {isUploading ? (
-                    <Loader2 className="w-5 h-5 text-indigo-400 animate-spin" />
-                  ) : (
-                    <ImageIcon className="w-5 h-5 text-white/70" />
-                  )}
-                </button>
+            <div className="relative pb-2">
+              <button
+                type="button"
+                disabled={isUploading || !connected}
+                onClick={() => {
+                  if (!state?.can_send_gifs) {
+                    notifications.show({
+                      title: "Upgrade Required",
+                      message: "Upgrade your plan to send GIFs.",
+                      color: "yellow",
+                      autoClose: 4000,
+                    });
+                    return;
+                  }
 
-                {/* HIDDEN FILE INPUT */}
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  accept="image/*"
-                  className="hidden"
-                />
-              </div>
-            {/* {state?.can_send_emojis && ( */}
-              <EmojiInput
-                value={input}
-                onChange={onInputChange}
-                disabled={!connected || !state?.can_send_gifs}
+                  fileInputRef.current?.click();
+                }}
+                className="p-3 rounded-xl transition-all disabled:opacity-50"
+              >
+                {isUploading ? (
+                  <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
+                ) : (
+                  <ImageIcon className="w-6 h-6 text-white/70" />
+                )}
+              </button>
+
+
+              {/* HIDDEN FILE INPUT */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/*"
+                className="hidden"
               />
+            </div>
+            {/* {state?.can_send_emojis && ( */}
+            <EmojiInput
+              value={input}
+              onChange={onInputChange}
+              connected={connected}
+              canUseEmoji={state?.can_send_emojis}
+            />
+
           </div>
         </div>
         <div>

@@ -9,6 +9,7 @@ import { signOut } from 'next-auth/react';
 const sidebarItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'mods', label: 'Mods', icon: Shield },
+  { id: 'random_users', label: 'Random Users', icon: Users },
   { id: 'users', label: 'Users', icon: Users },
   { id: 'plans', label: 'Plans', icon: Gift },
   { id: 'settings', label: 'Settings', icon: Settings },
