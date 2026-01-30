@@ -192,7 +192,7 @@ export default function PremiumModal({ open, onClose }: PremiumModalProps) {
           >
             {plans.map(plan => {
               const features = extractFeatures(plan)
-              const gradient =
+              const gradient = //bg-linear-to-r ${gradient}
                 gradients[plan.name] ?? 'from-indigo-500 to-pink-500'
               const isPremium = plan.name === 'Premium'
               const isPaying = payingPlanId === plan.id

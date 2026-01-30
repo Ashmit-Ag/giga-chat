@@ -365,3 +365,20 @@ input[type="date"]::-webkit-clear-button {
   display: none;             /* Chrome, Safari */
 }
 
+
+@keyframes gradient-move {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+.gradient-flow {
+  background-size: 300% 100%;
+  animation: gradient-move 6s linear infinite;
+}
