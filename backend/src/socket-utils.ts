@@ -74,5 +74,5 @@ export const endChat = (io: SocketIOServer, roomId: string) => {
   }
 
   activeChats.delete(roomId);
-  console.log(`[CLEANUP] Room ${roomId} closed. Mod ${modId} load decreased.`);
+  // console.log(`[CLEANUP] Room ${roomId} closed. Mod ${modId} load decreased.`);
 };

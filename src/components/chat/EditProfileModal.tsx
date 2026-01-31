@@ -53,7 +53,7 @@ export default function EditProfileModal({
         const res = await fetch('/api/user/user-details');
         const data = await res.json();
 
-        console.log("USER DATA", data)
+        // console.log("USER DATA", data)
 
         setProfile(data);
 

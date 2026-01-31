@@ -177,7 +177,7 @@ export function useModChatSocket(modName: string) {
 
     // 📩 RECEIVE MESSAGE FROM USER
     socket.on("chat:message", (msg) => {
-      console.log("MESSAGE RECIEVED", msg)
+      // console.log("MESSAGE RECIEVED", msg)
       if (msg.sender == "mod") return
       setChats((prev) =>
         prev.map((chat) =>
@@ -204,7 +204,7 @@ export function useModChatSocket(modName: string) {
 
 
     socket.on("chat:gift", (msg) => {
-      console.log("GIFT RECIEVED", msg)
+      // console.log("GIFT RECIEVED", msg)
       setChats((prev) =>
         prev.map((chat) =>
           chat.roomId === msg.roomId
@@ -294,7 +294,7 @@ export function useModChatSocket(modName: string) {
       content: text,
     });
 
-    console.log("MESSAGE SENT BY MOD", { activeRoomId, text })
+    // console.log("MESSAGE SENT BY MOD", { activeRoomId, text })
 
     socketRef.current.emit("stop:typing");
   };

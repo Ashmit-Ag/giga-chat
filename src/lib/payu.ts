@@ -37,7 +37,7 @@ export function createPayUPayload(input: {
     .update(hashString, "utf8")
     .digest("hex");
 
-  console.log("HASH STRING",hashString)
+  // console.log("HASH STRING",hashString)
 
   return {
     key,

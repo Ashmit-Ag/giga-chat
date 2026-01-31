@@ -256,7 +256,7 @@ export default function UserChatPage() {
       },
     ]);
 
-    console.log("MESSAGE SENT - USER", myroomId)
+    // console.log("MESSAGE SENT - USER", myroomId)
 
     socketRef.current.emit("stop:typing");
 
@@ -316,7 +316,7 @@ export default function UserChatPage() {
   };
 
   const sendFriendRequest = () => {
-    console.log("FREIND REQ SEND USER", myroomId)
+    // console.log("FREIND REQ SEND USER", myroomId)
     socketRef.current.emit("friend:request", { roomId: roomIdRef.current });
   };
 

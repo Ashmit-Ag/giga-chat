@@ -90,7 +90,7 @@ export default function ChatControls({
 
     const data = await response.json();
     if (!data.success) {
-      console.log("MESSAGE IMAGE BB", data)
+      // console.log("MESSAGE IMAGE BB", data)
       throw new Error("Upload failed");
     }
 
@@ -137,7 +137,7 @@ export default function ChatControls({
 
 
   const handleSendGift = (amount: number) => {
-    console.log("Gifting amount:", amount);
+    // console.log("Gifting amount:", amount);
     onSendGift(amount, "INR")
     // Your socket logic here: socket.emit("gift:send", { amount });
   };

@@ -33,7 +33,7 @@ type GiftPayload = {
 export const handleUserNext = (io: SocketIOServer, socket: Socket) => {
   if (socket.data.role !== "user") return;
 
-  console.log(`[QUEUE] User ${socket.id} started searching...`);
+  // console.log(`[QUEUE] User ${socket.id} started searching...`);
   clearSearch(socket.id);
 
   // Math check: Your delay was quite short (1.8s to 7.2s). 
@@ -46,7 +46,7 @@ export const handleUserNext = (io: SocketIOServer, socket: Socket) => {
 
   const timeout = setTimeout(() => {
     // Debug: Check if any mods actually exist in memory
-    console.log(`[MATCHMAKING] Current Mod Loads Map Size: ${modLoads.size}`);
+    // console.log(`[MATCHMAKING] Current Mod Loads Map Size: ${modLoads.size}`);
     
     const availableMods = [...modLoads.entries()]
       .filter(([_, count]) => count < MAX_CHATS_PER_MOD)
@@ -90,7 +90,7 @@ export const handleUserNext = (io: SocketIOServer, socket: Socket) => {
       userPlan: socket.data.username
     });
     
-    console.log(`[SUCCESS] Room Created: ${roomId}`);
+    // console.log(`[SUCCESS] Room Created: ${roomId}`);
   }, delay);
 
   searchTimeouts.set(socket.id, timeout);
@@ -103,17 +103,17 @@ export const handleMessage = (
 ) => {
   const { type, content } = payload;
   if (!content) {
-    console.log("ERROR NO CONTENT")
+    // console.log("ERROR NO CONTENT")
     return
   };
 
   const roomId = payload.roomId;
   if (!roomId) {
-    console.log("ERROR NO ROOM ID")
+    // console.log("ERROR NO ROOM ID")
     return
   };
   
-  console.log("MESSAGE SENT")
+  // console.log("MESSAGE SENT")
   io.to(roomId).emit("chat:message", {
     id: Date.now(),
     sender: socket.data.role,
@@ -131,7 +131,7 @@ export const handleGiftMessage = (io: SocketIOServer, socket: Socket, payload: G
 
   const roomId = payload.roomId;
   if (!roomId) {
-    console.log("NO ROOM ID GIFT", payload)
+    // console.log("NO ROOM ID GIFT", payload)
     return
   };
 

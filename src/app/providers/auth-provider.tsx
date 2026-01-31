@@ -51,9 +51,13 @@ function AuthGuard({ children }: { children: ReactNode }) {
   // Handle Loading state
   if (status === "loading") {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p>Loading...</p>
+      <div className="flex min-h-screen items-center justify-center bg-gray-950 text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-500/30 border-t-indigo-500" />
+          <p className="text-sm tracking-wide text-indigo-300">Loading…</p>
+        </div>
       </div>
+
     );
   }
 

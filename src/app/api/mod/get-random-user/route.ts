@@ -8,7 +8,7 @@ export async function GET(req: Request) {
 
     const where =
       gender && gender !== "random"
-        ? { gender: gender.toLowerCase() }
+        ? { gender: gender }
         : {};
 
     // count first
@@ -16,7 +16,7 @@ export async function GET(req: Request) {
 
     if (count === 0) {
       return NextResponse.json(
-        { error: "No users found" },
+        { error: "No users found 0 count" },
         { status: 404 }
       );
     }
@@ -38,7 +38,7 @@ export async function GET(req: Request) {
 
     if (!user) {
       return NextResponse.json(
-        { error: "User not found" },
+        { error: "User not found no count" },
         { status: 404 }
       );
     }

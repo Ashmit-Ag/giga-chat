@@ -29,7 +29,7 @@ const io = new SocketIOServer(httpServer, {
   transports: ["websocket", "polling"], // Matches Next.js handler
 });
 
-console.log("🚀 Initializing Socket.IO Server...");
+// console.log("🚀 Initializing Socket.IO Server...");
 
 io.on("connection", (socket: Socket) => {
   const { role, userId, gender } = socket.handshake.auth;
@@ -52,12 +52,12 @@ io.on("connection", (socket: Socket) => {
   if(role === "user"){
     socket.data.userId = userId
     socket.data.gender = gender
-    console.log(`[CONNECTED] ID: ${socket.id} | Role: ${role} | UserId: ${userId}`);
+    // console.log(`[CONNECTED] ID: ${socket.id} | Role: ${role} | UserId: ${userId}`);
 
   }
   if (role === "mod") {
     modLoads.set(socket.id, 0);
-    console.log(`[MOD_READY] ${socket.id} added to matchmaking pool`);
+    // console.log(`[MOD_READY] ${socket.id} added to matchmaking pool`);
   }
   
 
@@ -77,9 +77,9 @@ io.on("connection", (socket: Socket) => {
     socket.data.username = username;
     socket.data.rooms.add(roomId);
   
-    console.log(
-      `[IDENTIFY] User ${username} identified in room ${roomId}`
-    );
+    // console.log(
+    //   `[IDENTIFY] User ${username} identified in room ${roomId}`
+    // );
   
     // 📡 Forward identity to MOD in the same room
     socket.to(roomId).emit("user:identify", {
@@ -97,9 +97,9 @@ socket.on("friend:request", ({ roomId }) => {
     );
   }
 
-  console.log(
-    `[FRIEND_REQUEST] ${socket.data.role} ${socket.id} → room ${roomId}`
-  );
+  // console.log(
+  //   `[FRIEND_REQUEST] ${socket.data.role} ${socket.id} → room ${roomId}`
+  // );
 
   // Send to everyone else in the room
   socket.to(roomId).emit("friend:request-received", roomId);
@@ -112,9 +112,9 @@ socket.on("friend:request:accepted", ({ roomId }) => {
     );
   }
 
-  console.log(
-    `[FRIEND_ACCEPTED] ${socket.data.role} ${socket.id} in room ${roomId}`
-  );
+  // console.log(
+  //   `[FRIEND_ACCEPTED] ${socket.data.role} ${socket.id} in room ${roomId}`
+  // );
 
   // Notify both sides (including sender)
   io.to(roomId).emit("friend:request:accepted");
@@ -161,13 +161,13 @@ socket.on("friend:request:accepted", ({ roomId }) => {
 
   socket.on("chat:next", (roomId: string) => {
     if (!roomId) return;
-    console.log(`[CHAT_END] Manually ending room ${roomId}`);
+    // console.log(`[CHAT_END] Manually ending room ${roomId}`);
     endChat(io, roomId);
   });
 
   // 4. Cleanup Logic (Matched Exactly)
   socket.on("disconnect", (reason) => {
-    console.log(`[DISCONNECTED] ${socket.id} | ${reason}`);
+    // console.log(`[DISCONNECTED] ${socket.id} | ${reason}`);
   
     try {
       clearSearch(socket.id);
@@ -202,5 +202,5 @@ socket.on("friend:request:accepted", ({ roomId }) => {
 // Final Server Listen Logic
 const PORT = process.env.PORT || 10000;
 httpServer.listen(PORT, () => {
-  console.log(`🚀 Socket server running on port ${PORT}`);
+  // console.log(`🚀 Socket server running on port ${PORT}`);
 });

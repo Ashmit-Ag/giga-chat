@@ -35,7 +35,7 @@ type GiftPayload = {
 export const handleUserNext = (io: SocketIOServer, socket: Socket) => {
   if (socket.data.role !== "user") return;
 
-  console.log(`[QUEUE] User ${socket.id} started searching...`);
+  // console.log(`[QUEUE] User ${socket.id} started searching...`);
 
   // 🧹 clear any previous search
   clearSearch(socket.id);
@@ -51,11 +51,11 @@ export const handleUserNext = (io: SocketIOServer, socket: Socket) => {
   const timeout = setTimeout(() => {
     // ❌ user cancelled search meanwhile
     if (!searchingSockets.has(socket.id)) {
-      console.log(`[MATCH_ABORTED] User ${socket.id} cancelled search`);
+      // console.log(`[MATCH_ABORTED] User ${socket.id} cancelled search`);
       return;
     }
 
-    console.log(`[MATCHMAKING] Mod load count: ${modLoads.size}`);
+    // console.log(`[MATCHMAKING] Mod load count: ${modLoads.size}`);
 
     const availableMods = [...modLoads.entries()]
     .filter(([modId, count]) => {
@@ -109,7 +109,7 @@ export const handleUserNext = (io: SocketIOServer, socket: Socket) => {
       userGenderSelected: socket.data.gender,
     });
 
-    console.log(`[MATCH_SUCCESS] Room ${roomId} created`);
+    // console.log(`[MATCH_SUCCESS] Room ${roomId} created`);
   }, delay);
 
   searchTimeouts.set(socket.id, timeout);
@@ -123,17 +123,17 @@ export const handleMessage = (
 ) => {
   const { type, content } = payload;
   if (!content) {
-    console.log("ERROR NO CONTENT")
+    // console.log("ERROR NO CONTENT")
     return
   };
 
   const roomId = payload.roomId;
   if (!roomId) {
-    console.log("ERROR NO ROOM ID")
+    // console.log("ERROR NO ROOM ID")
     return
   };
   
-  console.log("MESSAGE SENT")
+  // console.log("MESSAGE SENT")
   io.to(roomId).emit("chat:message", {
     id: Date.now(),
     sender: socket.data.role,
@@ -152,7 +152,7 @@ export const handleGiftMessage = (io: SocketIOServer, socket: Socket, payload: G
 
   const roomId = payload.roomId;
   if (!roomId) {
-    console.log("NO ROOM ID GIFT", payload)
+    // console.log("NO ROOM ID GIFT", payload)
     return
   };
 

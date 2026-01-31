@@ -55,7 +55,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
    * Fetch fresh plan from server
    */
   const fetchUserPlan = useCallback(async () => {
-    console.log("USER LOGGED IN")
+    // console.log("USER LOGGED IN")
     setLoading(true);
     try {
       const response = await fetch("/api/user/plan-details");
@@ -105,45 +105,57 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
    * Optimistic chat decrement
    */
   const decreaseChat = useCallback(async () => {
-    if (!state || state.chats_left <= 0) return false;
-    
-    if(state.planName == "Premium") return false
-
-    setState((prev) =>
-      prev ? { ...prev, chats_left: Math.max(prev.chats_left - 1, 0) } : prev
-    );
-
+    let allowed = false;
+  
+    // optimistic update (single source of truth)
+    setState((prev) => {
+      if (!prev || prev.chats_left <= 0 || prev.planName === "Premium") {
+        // console.log("ERROR DEDUCTING CHATS, STATE", prev);
+        return prev;
+      }
+  
+      allowed = true;
+      // console.log("DEDUCTING CHATS, STATE", prev);
+  
+      return {
+        ...prev,
+        chats_left: Math.max(prev.chats_left - 1, 0),
+      };
+    });
+  
+    if (!allowed) return false;
+  
     try {
       const res = await fetch("/api/user", { method: "POST" });
       const data = await res.json();
-
+  
       if (!res.ok || !data.success) {
-        // throw new Error("Failed to decrease chat");
-        console.error("Chat decrease failed:");
+        throw new Error("Failed to decrease chat");
       }
-
-      const updatedState = state
-        ? { ...state, chats_left: data.chats_left }
-        : null;
-
-      if (updatedState) {
-        setState(updatedState);
-        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(updatedState));
-      }
-
-      console.log("CHAT DECREASED")
+  
+      // server-authoritative sync
+      setState((prev) => {
+        if (!prev) return prev;
+  
+        const updated = { ...prev, chats_left: data.chats_left };
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        return updated;
+      });
+  
+      // console.log("CHAT DECREASED");
       return true;
     } catch (error) {
       console.error("Chat decrease failed:", error);
-
+  
       // rollback
       setState((prev) =>
         prev ? { ...prev, chats_left: prev.chats_left + 1 } : prev
       );
-
+  
       return false;
     }
-  }, [state]);
+  }, []);
+  
 
   /**
    * Initial load:
